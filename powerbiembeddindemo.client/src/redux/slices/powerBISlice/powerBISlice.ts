@@ -9,7 +9,7 @@
  * - Includes actions to set selected workspace, semanticModels, and reports.
  */
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { getAccessToken, getAppModeAccessKey } from "../../../configs/msalInstance";
+import { getAccessToken } from "../../../configs/msalInstance";
 import { type SemanticModel, type Report, type WorkSpace } from "../../../lib/powerbiLib/@types";
 import { fetchUserWorkspaces, fetchSemanticModelsOfWorkspace, fetchReportsForWorkspace } from "../../../lib/powerbiLib";
 import type { PowerBISliceState } from "./@types";
@@ -39,7 +39,7 @@ export const fetchWorkspaces = createAsyncThunk<{ workspaces: WorkSpace[] }, str
       }
       return rejectWithValue("An unknown error occurred during login");
     }
-  }
+  },
 );
 /**
  * Async thunk to fetch semanticModels for a given workspace in Power BI.
@@ -70,7 +70,7 @@ export const fetchSemanticModels = createAsyncThunk<{ semanticModels: SemanticMo
       }
       return rejectWithValue("An unknown error occurred during login");
     }
-  }
+  },
 );
 /**
  * Async thunk to fetch reports for a given workspace in Power BI.
@@ -100,7 +100,7 @@ export const fetchReports = createAsyncThunk<{ report: Report[] }, { workspaceId
       }
       return rejectWithValue("An unknown error occurred during login");
     }
-  }
+  },
 );
 
 /**

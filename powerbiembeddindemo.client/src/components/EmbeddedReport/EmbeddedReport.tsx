@@ -1,7 +1,5 @@
 import { models } from "powerbi-client";
 import { PowerBIEmbed } from "powerbi-client-react";
-import { getAccessToken, getAppModeAccessKey } from "../../configs/msalInstance";
-import { useEffect, useState } from "react";
 import type { EmbedReportProps } from "./@type";
 
 const EmbedReport: React.FC<EmbedReportProps> = ({

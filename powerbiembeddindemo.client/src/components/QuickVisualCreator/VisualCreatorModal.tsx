@@ -1,10 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback, useMemo } from "react";
-import {
-  visualTypeToDataRoles,
-  schemas,
-  propertyToSelector,
-  visualTypeProperties,
-} from "./visualConfig";
+import { visualTypeToDataRoles, schemas, propertyToSelector, visualTypeProperties } from "./visualConfig";
 import type { DatasetField } from "../../lib/powerbiLib";
 import "./VisualCreatorModal.css";
 
@@ -48,15 +44,7 @@ const initialState: VisualCreatorState = {
   newVisual: null,
 };
 
-export default function VisualCreatorModal({
-  isOpen,
-  onClose,
-  onCreateVisual,
-  report,
-  authoringPage,
-  editingVisual,
-  datasetFields,
-}: VisualCreatorModalProps) {
+export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, report, authoringPage, datasetFields }: VisualCreatorModalProps) {
   const [state, setState] = useState<VisualCreatorState>({ ...initialState });
   const [customTitle, setCustomTitle] = useState("");
   const [titleAlignment, setTitleAlignment] = useState("left");
@@ -138,7 +126,7 @@ export default function VisualCreatorModal({
         console.error("Error creating visual:", e);
       }
     },
-    [report, authoringPage, state.visualType, state.newVisual]
+    [report, authoringPage, state.visualType, state.newVisual],
   );
 
   const handleDataFieldChange = useCallback(
@@ -190,7 +178,7 @@ export default function VisualCreatorModal({
         console.error(`Error updating data field for role ${dataRoleName}:`, e);
       }
     },
-    [state.newVisual, state.dataRoles, state.dataFieldsCount]
+    [state.newVisual, state.dataRoles, state.dataFieldsCount],
   );
 
   const handlePropertyToggle = useCallback(
@@ -207,7 +195,7 @@ export default function VisualCreatorModal({
         value,
       });
     },
-    [state.newVisual]
+    [state.newVisual],
   );
 
   const handleTitleTextChange = useCallback(
@@ -224,7 +212,7 @@ export default function VisualCreatorModal({
         });
       }
     },
-    [state.newVisual]
+    [state.newVisual],
   );
 
   const handleTitleAlignChange = useCallback(
@@ -242,7 +230,7 @@ export default function VisualCreatorModal({
         properties: { ...prev.properties, titleAlign: direction },
       }));
     },
-    [state.newVisual]
+    [state.newVisual],
   );
 
   const buildFinalState = (): VisualCreatorState => ({

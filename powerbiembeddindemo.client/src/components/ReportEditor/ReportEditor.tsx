@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/ReportEditor/ReportEditor.tsx
 import React, { useState } from "react";
 import { setReportMode } from "../../lib/powerbiLib/personalization";
-// @ts-ignore -- CSS side-effect imports are handled by Vite at runtime.
 import "./ReportEditor.css";
 
 interface ReportEditorProps {
@@ -15,16 +15,7 @@ interface ReportEditorProps {
   onModeChange?: (mode: "view" | "edit") => void;
 }
 
-export const ReportEditor: React.FC<ReportEditorProps> = ({
-  reportRef,
-  reportId,
-  userId,
-  workspaceId,
-  allowEdit = true,
-  onSave,
-  onCancel,
-  onModeChange,
-}) => {
+export const ReportEditor: React.FC<ReportEditorProps> = ({ reportRef, allowEdit = true, onSave, onCancel, onModeChange }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +23,7 @@ export const ReportEditor: React.FC<ReportEditorProps> = ({
   const handleToggleEdit = async () => {
     try {
       setError(null);
-      
+
       if (!isEditMode) {
         console.log("[ReportEditor] Attempting to enable edit mode. allowEdit:", allowEdit);
         try {
@@ -43,11 +34,9 @@ export const ReportEditor: React.FC<ReportEditorProps> = ({
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to enable edit mode";
           console.error("[ReportEditor] Error enabling edit mode:", message);
-          
+
           // Check if it's a permission error
-          if (message.toLowerCase().includes("insufficient") || 
-              message.toLowerCase().includes("permission") ||
-              message.toLowerCase().includes("edit rights")) {
+          if (message.toLowerCase().includes("insufficient") || message.toLowerCase().includes("permission") || message.toLowerCase().includes("edit rights")) {
             setError("Edit mode is blocked by Power BI permissions. Ensure this account has edit rights in the workspace/report.");
           } else {
             setError(message);
@@ -83,8 +72,7 @@ export const ReportEditor: React.FC<ReportEditorProps> = ({
       onModeChange?.("view");
       onSave?.();
     } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to save report";
+      const errorMsg = err instanceof Error ? err.message : "Failed to save report";
       console.error("[ReportEditor] Save error:", errorMsg);
       setError(errorMsg);
     } finally {
@@ -106,28 +94,15 @@ export const ReportEditor: React.FC<ReportEditorProps> = ({
 
   return (
     <div className="report-editor-toolbar">
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {!isEditMode ? (
-        <button
-          onClick={handleToggleEdit}
-          className="btn btn-edit"
-          disabled={isSaving}
-          title="Switch report to edit mode"
-        >
+        <button onClick={handleToggleEdit} className="btn btn-edit" disabled={isSaving} title="Switch report to edit mode">
           Edit Report
         </button>
       ) : (
         <div className="edit-mode-controls">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="btn btn-save"
-          >
+          <button onClick={handleSave} disabled={isSaving} className="btn btn-save">
             {isSaving ? "Saving..." : "Save Changes"}
           </button>
           <button onClick={handleCancel} className="btn btn-cancel">
