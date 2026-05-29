@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useDispatch } from "react-redux";
 import { models } from "powerbi-client";
 import "powerbi-report-authoring";
 import { PowerBIEmbed } from "powerbi-client-react";
 import VisualCreatorModal from "./VisualCreatorModal";
 import type { VisualCreatorState } from "./VisualCreatorModal";
+import { addBookmark } from "../../redux/slices/bookmarkSlice/bookmarkSlice";
+import type { BookmarkedVisual, VisualSnapshot } from "../../redux/slices/bookmarkSlice/@types";
 import {
   schemas,
   propertyToSelector,
@@ -29,6 +32,7 @@ interface BaseReportState {
 }
 
 export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, reportId, tokenType = "Aad" }: QuickVisualCreatorProps, ref) {
+  const dispatch = useDispatch();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [datasetFields, setDatasetFields] = useState<DatasetField[]>([]);
@@ -45,15 +49,42 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
   const baseReportRef = useRef<any>(null);
   const authoringReportRef = useRef<any>(null);
   const baseStateRef = useRef(baseReportState);
+  const handleLoadBookmarkRef = useRef<((bookmark: BookmarkedVisual) => void) | null>(null);
+  const isLoadingBookmarkRef = useRef(false);
+  const lastVisualStateRef = useRef<VisualCreatorState | null>(null);
+  const allVisualSnapshotsRef = useRef<VisualSnapshot[]>([]);
 
   useEffect(() => {
     baseStateRef.current = baseReportState;
   }, [baseReportState]);
 
-  // Expose openModal method to parent components via ref
+  // Immediately sync ref on state changes to avoid stale reads between renders
+  const updateBaseState = useCallback((updater: (prev: BaseReportState) => BaseReportState) => {
+    setBaseReportState((prev) => {
+      const next = updater(prev);
+      baseStateRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // Expose openModal, loadBookmark, bookmarkLastVisual methods to parent via ref
   useImperativeHandle(ref, () => ({
     openModal: () => setIsModalOpen(true),
-  }), []);
+    loadBookmark: (bookmark: BookmarkedVisual) => handleLoadBookmarkRef.current?.(bookmark),
+    bookmarkLastVisual: (name: string) => {
+      const snapshots = allVisualSnapshotsRef.current;
+      if (!snapshots.length) return false;
+      const label = name || `View – ${new Date().toLocaleTimeString()}`;
+      dispatch(addBookmark({
+        id: crypto.randomUUID(),
+        name: label,
+        visuals: [...snapshots],
+        createdAt: Date.now(),
+      }));
+      return true;
+    },
+    hasVisual: () => allVisualSnapshotsRef.current.length > 0,
+  }), [dispatch]);
 
   // Base report configuration - memoized to prevent re-embed on every render
   const baseReportConfig = useMemo<models.IReportEmbedConfiguration>(() => ({
@@ -198,7 +229,7 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
 
         const visuals = await activePage.getVisuals();
 
-        setBaseReportState({ report, page: activePage, visuals });
+        updateBaseState(() => ({ report, page: activePage, visuals }));
         baseReportRef.current = report;
 
         await rearrangeInCustomLayout(report, activePage, visuals);
@@ -210,7 +241,7 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
         setIsLoading(false);
       }
     },
-    [rearrangeInCustomLayout]
+    [rearrangeInCustomLayout, updateBaseState]
   );
 
   // Fallback: extract fields from existing visuals in the report
@@ -266,6 +297,7 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
     async (visualState: VisualCreatorState) => {
       const currentState = baseStateRef.current;
       if (!currentState.report || !currentState.page || !visualState.visualType) return;
+      lastVisualStateRef.current = visualState;
 
       try {
         const margin = VISUAL_CREATOR_SHOWCASE.MARGIN;
@@ -334,15 +366,130 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
         }
 
         const updatedVisuals = [...currentState.visuals, visual];
-        setBaseReportState((prev) => ({ ...prev, visuals: updatedVisuals }));
+        updateBaseState((prev) => ({ ...prev, visuals: updatedVisuals }));
 
         await rearrangeInCustomLayout(currentState.report, currentState.page, updatedVisuals);
+
+        // Track snapshot for this visual
+        const snapshot: VisualSnapshot = {
+          visualType: visualState.visualType,
+          dataRoles: visualState.dataRoles,
+          properties: visualState.properties,
+        };
+        allVisualSnapshotsRef.current = [...allVisualSnapshotsRef.current, snapshot];
+
+        // Auto-save all current visuals as a bookmark
+        const autoName = [
+          visualState.properties.titleText || null,
+          visualState.visualType,
+        ].filter(Boolean).join(" – ");
+        dispatch(addBookmark({
+          id: crypto.randomUUID(),
+          name: autoName,
+          visuals: [...allVisualSnapshotsRef.current],
+          createdAt: Date.now(),
+        }));
       } catch (e) {
         console.error("Error creating visual on base report:", e);
       }
     },
-    [rearrangeInCustomLayout]
+    [rearrangeInCustomLayout, updateBaseState, dispatch]
   );
+
+
+  // Load all visuals from a bookmarked view onto the report
+  const handleLoadBookmark = useCallback(
+    async (bookmark: BookmarkedVisual) => {
+      if (isLoadingBookmarkRef.current) return;
+
+      const currentState = baseStateRef.current;
+      if (!currentState.report || !currentState.page) return;
+
+      isLoadingBookmarkRef.current = true;
+      try {
+        const margin = VISUAL_CREATOR_SHOWCASE.MARGIN;
+        const columns = VISUAL_CREATOR_SHOWCASE.COLUMNS;
+        const containerWidth = 1200;
+        const visualsTotalWidth = containerWidth - margin * (columns + 1);
+        const visualWidth = visualsTotalWidth / columns;
+        const visualHeight = visualWidth * VISUAL_CREATOR_SHOWCASE.VISUAL_ASPECT_RATIO;
+
+        // Append to whatever is already on the report
+        let runningVisuals: any[] = [...currentState.visuals];
+
+        for (const snap of bookmark.visuals) {
+          const existingCount = runningVisuals.length;
+          const row = Math.floor(existingCount / columns);
+          const col = existingCount % columns;
+          const layout = {
+            x: margin + col * (visualWidth + margin),
+            y: margin + row * (visualHeight + margin),
+            width: visualWidth,
+            height: visualHeight,
+            displayState: { mode: models.VisualContainerDisplayMode.Visible },
+          };
+
+          const visualResponse = await currentState.page.createVisual(snap.visualType, layout);
+          const visual = visualResponse.visual || visualResponse;
+
+          visual.setProperty(propertyToSelector("titleSize"), { schema: schemas.property, value: 13 });
+          visual.setProperty(propertyToSelector("titleColor"), { schema: schemas.property, value: "#000" });
+
+          if (snap.visualType === "pieChart") {
+            visual.setProperty(propertyToSelector("legend"), { schema: schemas.property, value: true });
+          }
+
+          const availableProps = visualTypeProperties[snap.visualType] || [];
+          Object.entries(snap.properties).forEach(([propName, propValue]) => {
+            if (propName === "titleText") {
+              if (propValue && typeof propValue === "string" && propValue !== "") {
+                visual.setProperty(propertyToSelector("titleText"), { schema: schemas.property, value: propValue });
+              }
+              return;
+            }
+            if (propName === "titleAlign") {
+              if (propValue && typeof propValue === "string") {
+                visual.setProperty(propertyToSelector("titleAlign"), { schema: schemas.property, value: propValue });
+              }
+              return;
+            }
+            if (availableProps.includes(propName) || propName === "title") {
+              visual.setProperty(propertyToSelector(propName), { schema: schemas.property, value: propValue });
+            }
+          });
+
+          if (snap.visualType === "columnChart" || snap.visualType === "barChart") {
+            visual.setProperty(propertyToSelector("legend"), { schema: schemas.property, value: false });
+          }
+
+          const validDataRoles = Object.entries(snap.dataRoles).filter(([, field]) => field !== null);
+          for (const [dataRole, field] of validDataRoles) {
+            if (field) {
+              try {
+                await visual.addDataField(dataRole, field);
+              } catch (e) {
+                console.error(`Error adding data field to ${dataRole}:`, e);
+              }
+            }
+          }
+
+          runningVisuals = [...runningVisuals, visual];
+        }
+
+        // Sync tracking refs — append new snapshots to existing ones
+        allVisualSnapshotsRef.current = [...allVisualSnapshotsRef.current, ...bookmark.visuals];
+        updateBaseState((prev) => ({ ...prev, visuals: runningVisuals }));
+        await rearrangeInCustomLayout(currentState.report, currentState.page, runningVisuals);
+      } catch (e) {
+        console.error("Error loading bookmarked view:", e);
+      } finally {
+        isLoadingBookmarkRef.current = false;
+      }
+    },
+    [rearrangeInCustomLayout, updateBaseState]
+  );
+
+  handleLoadBookmarkRef.current = handleLoadBookmark;
 
   // Handle context menu command to edit visual
   const handleCommandTriggered = useCallback((event: any) => {

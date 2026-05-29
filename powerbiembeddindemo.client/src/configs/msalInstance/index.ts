@@ -59,7 +59,6 @@ export const getAccessToken = async () => {
       const response = await msalInstance.acquireTokenPopup(request);
       // Only log access tokens in non-production environments for debugging.
       if (process.env.NODE_ENV !== "production") {
-        console.log("Access token (acquireTokenPopup):", response.accessToken);
       }
       return response.accessToken;
     } catch (popupError) {
@@ -93,6 +92,5 @@ export const getAppModeAccessKeyUtil = async (tenantId: string, clientId: string
   }
 
   const data = await response.json();
-  console.log("getAppModeAccessKeyUtil", data);
   return data.access_token; // ⬅️ This is your Microsoft Access Token
 };

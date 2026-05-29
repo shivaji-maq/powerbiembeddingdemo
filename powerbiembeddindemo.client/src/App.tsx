@@ -5,6 +5,7 @@ import logo from "./assets/logo.svg";
 import { useAuth } from "./hooks/useAuth";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchReports, fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
+import { removeBookmark } from "./redux/slices/bookmarkSlice/bookmarkSlice";
 import { PersonalizedEditableReport } from "./components/PersonalizedEditableReport/PersonalizedEditableReport";
 import { QuickVisualCreator } from "./components/QuickVisualCreator";
 import { getAccessToken } from "./configs/msalInstance";
@@ -40,6 +41,8 @@ function App() {
   const [rFilter, setRFilter] = useState("");
   const [authError, setAuthError] = useState<string>("");
   const [mode, setMode] = useState<"viewer" | "creator">("viewer");
+  const [selectedBookmarkId, setSelectedBookmarkId] = useState("");
+  const bookmarks = useSelector((state: RootState) => state.bookmarks.bookmarks);
   const { isAuthenticated, user, account, error: authHookError } = useAuth();
   const { workspaces, fetchingWorkspaces, fetchingReports, reports, errorInWorkspace } = useSelector(
     (state: RootState) => state.powerBI
@@ -55,16 +58,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    console.log("Auth state changed:", { isAuthenticated, user, account, authHookError });
-    console.log("Power BI state:", { workspaces: workspaces?.length, reports: reports?.length, fetchingWorkspaces, fetchingReports, errorInWorkspace });
     const fun = async () => {
       if (isAuthenticated) {
         try {
           const ak = await getAccessToken();
-          console.log("Access token acquired:", !!ak);
           if (ak) {
             setAccessKey(ak);
-            console.log("Dispatching fetchWorkspaces with token");
             dispatch(fetchWorkspaces(ak));
           } else {
             const error = "Power BI access token was not acquired.";
@@ -265,15 +264,73 @@ function App() {
               <>
                 {mode === "creator" ? (
                   <>
-                    {/* Toggle button row for creator mode */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <button
-                        className="primary-btn"
-                        onClick={() => quickVisualCreatorRef.current?.openModal()}
-                        style={{ background: "#1a237e", color: "#fff" }}
-                      >
-                        + Create Visual
-                      </button>
+                    {/* Toolbar row for creator mode */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                          className="primary-btn"
+                          onClick={() => quickVisualCreatorRef.current?.openModal()}
+                          style={{ background: "#1a237e", color: "#fff" }}
+                        >
+                          + Create Visual
+                        </button>
+
+                        {/* Save View = manual bookmark of last visual */}
+                        <button
+                          className="primary-btn"
+                          style={{ background: "#2e7d55", color: "#fff", fontWeight: 600 }}
+                          onClick={() => quickVisualCreatorRef.current?.bookmarkLastVisual("")}
+                        >
+                          Save View
+                        </button>
+
+                        {/* Bookmark selector + delete + load */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <select
+                            className="sidebar-input"
+                            style={{ margin: 0, minWidth: 180, maxWidth: 280, height: 34 }}
+                            value={selectedBookmarkId}
+                            onChange={(e) => setSelectedBookmarkId(e.target.value)}
+                          >
+                            <option value="" disabled>Select bookmark</option>
+                            {bookmarks.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            title="Delete bookmark"
+                            disabled={!selectedBookmarkId}
+                            style={{
+                              width: 34, height: 34, border: "1.5px solid #e57373", borderRadius: 6,
+                              background: "#fff", color: "#e53935", cursor: selectedBookmarkId ? "pointer" : "not-allowed",
+                              fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center",
+                              opacity: selectedBookmarkId ? 1 : 0.4,
+                            }}
+                            onClick={() => {
+                              dispatch(removeBookmark(selectedBookmarkId));
+                              setSelectedBookmarkId("");
+                            }}
+                          >
+                            ✕
+                          </button>
+                          <button
+                            title="Load bookmark"
+                            disabled={!selectedBookmarkId}
+                            style={{
+                              width: 34, height: 34, border: "1.5px solid #43a047", borderRadius: 6,
+                              background: "#fff", color: "#2e7d32", cursor: selectedBookmarkId ? "pointer" : "not-allowed",
+                              fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center",
+                              opacity: selectedBookmarkId ? 1 : 0.4,
+                            }}
+                            onClick={() => {
+                              const bm = bookmarks.find((b) => b.id === selectedBookmarkId);
+                              if (bm) quickVisualCreatorRef.current?.loadBookmark(bm);
+                            }}
+                          >
+                            ↻
+                          </button>
+                        </div>
+                      </div>
                       <button
                         className="primary-btn"
                         onClick={() => setMode("viewer")}
