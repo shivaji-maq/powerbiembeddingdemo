@@ -75,6 +75,9 @@
   height: 64px;
   box-shadow: 0 2px 8px rgba(30, 34, 126, 0.08);
 }
+.app-header p {
+  margin: 0;
+}
 
 .header-left {
   display: flex;
@@ -233,7 +236,14 @@
   align-items: stretch;
   min-width: 0;
 }
-
+.main-content-child {
+  width: 100% !important;
+  height: 100% !important;
+}
+.main-content-child > iframe {
+  width: 100% !important;
+  height: 90% !important;
+}
 .empty-state {
   color: #b0b4c0;
   font-size: 1.2rem;

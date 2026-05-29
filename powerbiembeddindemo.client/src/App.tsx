@@ -1,14 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { models } from "powerbi-client";
 import "./App.css";
 import logo from "./assets/logo.svg";
 import { useAuth } from "./hooks/useAuth";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchReports, fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
+import { fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
 import { PersonalizedEditableReport } from "./components/PersonalizedEditableReport/PersonalizedEditableReport";
 import { QuickVisualCreator } from "./components/QuickVisualCreator";
 import { getAccessToken } from "./configs/msalInstance";
 import type { RootState, AppDispatch } from "./redux/store";
+import { reportsToEmbed, type ReportToEmbed } from "./constants/reports";
+import { POWER_BI_API_CONST } from "./lib/powerbiLib";
+import axios from "axios";
 
 interface WorkSpace {
   id: string;
@@ -33,30 +37,35 @@ interface SelectedData {
 }
 
 function App() {
+  const [selectedReportRaw, setSelectedReportRaw] = useState<ReportToEmbed | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkSpace | null>(null);
   const [accessKey, setAccessKey] = useState("");
-  const [wsFilter, setWsFilter] = useState("");
-  const [rFilter, setRFilter] = useState("");
+  // const [wsFilter, setWsFilter] = useState("");
+  // const [rFilter, setRFilter] = useState("");
   const [authError, setAuthError] = useState<string>("");
   const [mode, setMode] = useState<"viewer" | "creator">("viewer");
   const { isAuthenticated, user, account, error: authHookError } = useAuth();
-  const { workspaces, fetchingWorkspaces, fetchingReports, reports, errorInWorkspace } = useSelector(
-    (state: RootState) => state.powerBI
-  );
+  const {
+    workspaces,
+    fetchingWorkspaces,
+    // fetchingReports, reports,
+    errorInWorkspace,
+  } = useSelector((state: RootState) => state.powerBI);
   const dispatch = useDispatch<AppDispatch>();
 
   const reportRef = useRef<any>(null);
   const quickVisualCreatorRef = useRef<any>(null);
 
-  useEffect(() => {
-    console.log("App mounted, isAuthenticated:", isAuthenticated);
-    console.log("User:", user);
-  }, []);
+  // useEffect(() => {
+  //   console.log("App mounted, isAuthenticated:", isAuthenticated);
+  //   console.log("User:", user);
+  // }, []);
 
   useEffect(() => {
-    console.log("Auth state changed:", { isAuthenticated, user, account, authHookError });
-    console.log("Power BI state:", { workspaces: workspaces?.length, reports: reports?.length, fetchingWorkspaces, fetchingReports, errorInWorkspace });
+    // console.log("Auth state changed:", { isAuthenticated, user, account, authHookError });
+    // console.log("Power BI state:", { workspaces: workspaces?.length, reports: reports?.length, fetchingWorkspaces, fetchingReports, errorInWorkspace });
     const fun = async () => {
       if (isAuthenticated) {
         try {
@@ -189,79 +198,127 @@ function App() {
     report.off("dataSelected", handleDataSelected);
     report.on("dataSelected", handleDataSelected);
   };
+  const mainContentDivRef = useRef<HTMLDivElement | null>(null);
 
-  return (
-    isAuthenticated && !authError && !authHookError ? (
-      <div className="app-root">
-        {/* Header */}
-        <header className="app-header">
-          <div className="header-left">
-            <img src={logo} alt="Logo" className="app-logo" />
-            <span className="app-title">Power BI Report Embedder</span>
-          </div>
+  return isAuthenticated && !authError && !authHookError ? (
+    <div className="app-root">
+      {/* Header */}
+      <header className="app-header">
+        <div className="header-left">
+          <img src={logo} alt="Logo" className="app-logo" />
+          <span className="app-title">Power BI Report Embedder</span>
+        </div>
 
-          <div>
-            <p>{user?.displayName}</p>
-            <p>{user?.email}</p>
-          </div>
-        </header>
+        <div>
+          <p>{user?.displayName}</p>
+          <p>{user?.email}</p>
+        </div>
+      </header>
 
-        <div className="app-main">
-          {/* Sidebar for workspace/report selection (User Mode) */}
+      <div className="app-main">
+        {/* Sidebar for workspace/report selection (User Mode) */}
 
-          <aside className="sidebar">
-            <div className="sidebar-section">
-              <input className="sidebar-input" type="text" value={wsFilter} onChange={(e) => setWsFilter(e.target.value)} placeholder="Filter workspace" />
-              <div className="sidebar-list">
-                {fetchingWorkspaces ? (
-                  <>Loading...</>
-                ) : (
-                  workspaces
-                    .filter((x: WorkSpace) => x.name.toLowerCase().includes(wsFilter.toLowerCase()))
-                    .filter((x: WorkSpace) => !x.name.toLowerCase().includes("pepsi"))
-                    .map((w: WorkSpace) => (
-                      <div className="sidebar-list-item" key={w.id}>
-                        <span className="sidebar-list-title" title={w.name}>
-                          {w.name}
-                        </span>
-                        <button className="mini-btn" onClick={() => {
+        <aside className="sidebar">
+          <div className="sidebar-section">
+            {reportsToEmbed.map((reportDetail) => (
+              <div className="sidebar-list-item" key={reportDetail.reportId}>
+                <span className="sidebar-list-title" title={reportDetail.name}>
+                  {reportDetail.name}
+                </span>
+                <button
+                  className="mini-btn"
+                  onClick={async () => {
+                    setSelectedReportRaw(reportDetail);
+                    if (reportDetail.isSecureEmbedded) {
+                      setTimeout(() => {
+                        if (mainContentDivRef.current && reportDetail.embeddingIframe) {
+                          mainContentDivRef.current.innerHTML = reportDetail.embeddingIframe;
+                        }
+                      }, 1000);
+                      return;
+                    }
+                    const workspace = workspaces.filter((x) => x.id == reportDetail.workspaceId);
+                    if (!workspace[0]) {
+                      alert("user don't have workspace access");
+                      return;
+                    }
+                    setSelectedWorkspace(workspace[0]);
+
+                    const reportUrl = `${POWER_BI_API_CONST.GROUP_BASE_URL}/${reportDetail.workspaceId}/reports`;
+
+                    const response = await axios.get(reportUrl, {
+                      headers: {
+                        Authorization: `Bearer ${accessKey}`,
+                        "Content-Type": "application/json",
+                      },
+                    });
+
+                    const reportData: Report[] = response.data?.value;
+                    const report = reportData.find((x) => x.id == reportDetail.reportId);
+                    if (report) setSelectedReport(report);
+                    else alert("report not found");
+                  }}
+                >
+                  Embed
+                </button>
+              </div>
+            ))}
+            {/* <input className="sidebar-input" type="text" value={wsFilter} onChange={(e) => setWsFilter(e.target.value)} placeholder="Filter workspace" />
+            <div className="sidebar-list">
+              {fetchingWorkspaces ? (
+                <>Loading...</>
+              ) : (
+                workspaces
+                  .filter((x: WorkSpace) => x.name.toLowerCase().includes(wsFilter.toLowerCase()))
+                  .filter((x: WorkSpace) => !x.name.toLowerCase().includes("pepsi"))
+                  .map((w: WorkSpace) => (
+                    <div className="sidebar-list-item" key={w.id}>
+                      <span className="sidebar-list-title" title={w.name}>
+                        {w.name}
+                      </span>
+                      <button
+                        className="mini-btn"
+                        onClick={() => {
                           setSelectedWorkspace(w);
                           void dispatch(fetchReports({ workspaceId: w.id, accessToken: accessKey }));
-                        }}>
-                          Fetch Reports
-                        </button>
-                      </div>
-                    ))
-                )}
-              </div>
+                        }}
+                      >
+                        Fetch Reports
+                      </button>
+                    </div>
+                  ))
+              )}
             </div>
-            <div className="sidebar-section">
-              <input className="sidebar-input" type="text" value={rFilter} onChange={(e) => setRFilter(e.target.value)} placeholder="Filter reports" />
-              <div className="sidebar-list">
-                {fetchingReports ? (
-                  <>Loading...</>
-                ) : (
-                  reports
-                    .filter((x: Report) => x.name.toLowerCase().includes(rFilter.toLowerCase()))
-                    .filter((x: Report) => !x.name.toLowerCase().includes("pepsi"))
-                    .map((w: Report) => (
-                      <div className="sidebar-list-item" key={w.id}>
-                        <span className="sidebar-list-title" title={w.name}>
-                          {w.name}
-                        </span>
-                        <button className="mini-btn" onClick={() => setSelectedReport(w)}>
-                          Embed
-                        </button>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-          </aside>
+          </div>
+          <div className="sidebar-section">
+            <input className="sidebar-input" type="text" value={rFilter} onChange={(e) => setRFilter(e.target.value)} placeholder="Filter reports" />
+            <div className="sidebar-list">
+              {fetchingReports ? (
+                <>Loading...</>
+              ) : (
+                reports
+                  .filter((x: Report) => x.name.toLowerCase().includes(rFilter.toLowerCase()))
+                  .filter((x: Report) => !x.name.toLowerCase().includes("pepsi"))
+                  .map((w: Report) => (
+                    <div className="sidebar-list-item" key={w.id}>
+                      <span className="sidebar-list-title" title={w.name}>
+                        {w.name}
+                      </span>
+                      <button className="mini-btn" onClick={() => setSelectedReport(w)}>
+                        Embed
+                      </button>
+                    </div>
+                  ))
+              )}
+            </div> */}
+          </div>
+        </aside>
 
-          {/* Main content area */}
-          <main className="main-content">
-            {selectedReport && selectedWorkspace ? (
+        {/* Main content area */}
+        <main className="main-content" ref={mainContentDivRef}>
+          {selectedReportRaw?.isSecureEmbedded && <div className="main-content-child" ref={mainContentDivRef}></div>}
+          {selectedReportRaw?.isSecureEmbedded == false ? (
+            selectedReport && selectedWorkspace ? (
               <>
                 {mode === "creator" ? (
                   <>
@@ -274,10 +331,7 @@ function App() {
                       >
                         + Create Visual
                       </button>
-                      <button
-                        className="primary-btn"
-                        onClick={() => setMode("viewer")}
-                      >
+                      <button className="primary-btn" onClick={() => setMode("viewer")}>
                         Report Viewer
                       </button>
                     </div>
@@ -308,10 +362,7 @@ function App() {
                       reportRef.current = report;
                     }}
                     toggleButton={
-                      <button
-                        className="primary-btn"
-                        onClick={() => setMode("creator")}
-                      >
+                      <button className="primary-btn" onClick={() => setMode("creator")}>
                         Quick Visual Creator
                       </button>
                     }
@@ -320,33 +371,33 @@ function App() {
               </>
             ) : (
               <div className="empty-state">Select a report to embed</div>
-            )}
-          </main>
-        </div>
+            )
+          ) : null}
+        </main>
       </div>
-    ) : authError || authHookError ? (
-      <div style={{ padding: "20px", color: "red", fontFamily: "Arial" }}>
-        <h2>Authentication Error</h2>
-        <p>{authError || authHookError}</p>
-        <p>Please check the browser console for more details.</p>
-      </div>
-    ) : errorInWorkspace ? (
-      <div style={{ padding: "20px", color: "red", fontFamily: "Arial" }}>
-        <h2>Error Loading Workspaces</h2>
-        <p>{errorInWorkspace}</p>
-        <p>Please check the browser console for more details.</p>
-      </div>
-    ) : isAuthenticated && fetchingWorkspaces ? (
-      <div style={{ padding: "20px", fontFamily: "Arial", textAlign: "center" }}>
-        <h2>Loading Power BI workspaces...</h2>
-        <p>Please wait while we fetch your workspaces and reports.</p>
-      </div>
-    ) : (
-      <div style={{ padding: "20px", fontFamily: "Arial", textAlign: "center" }}>
-        <p>Initializing authentication...</p>
-        <p>If this page doesn't load, please check the browser console for errors.</p>
-      </div>
-    )
+    </div>
+  ) : authError || authHookError ? (
+    <div style={{ padding: "20px", color: "red", fontFamily: "Arial" }}>
+      <h2>Authentication Error</h2>
+      <p>{authError || authHookError}</p>
+      <p>Please check the browser console for more details.</p>
+    </div>
+  ) : errorInWorkspace ? (
+    <div style={{ padding: "20px", color: "red", fontFamily: "Arial" }}>
+      <h2>Error Loading Workspaces</h2>
+      <p>{errorInWorkspace}</p>
+      <p>Please check the browser console for more details.</p>
+    </div>
+  ) : isAuthenticated && fetchingWorkspaces ? (
+    <div style={{ padding: "20px", fontFamily: "Arial", textAlign: "center" }}>
+      <h2>Loading Power BI workspaces...</h2>
+      <p>Please wait while we fetch your workspaces and reports.</p>
+    </div>
+  ) : (
+    <div style={{ padding: "20px", fontFamily: "Arial", textAlign: "center" }}>
+      <p>Initializing authentication...</p>
+      <p>If this page doesn't load, please check the browser console for errors.</p>
+    </div>
   );
 }
 

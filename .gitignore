@@ -108,11 +108,7 @@ sd/
 # ===============================
 *.bak
 *.backup
-
-# ===============================
-# Sensitive service config (Power BI / Azure)
-# ===============================
-powerbiembeddindemo.client/src/constants/servicePrinciple.ts
+ 
 
 # ===============================
 # Power BI

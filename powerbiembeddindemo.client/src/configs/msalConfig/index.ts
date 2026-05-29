@@ -5,7 +5,7 @@
  */
 
 import { LogLevel } from "@azure/msal-browser";
-import { FRONTEND_BASE_URL, MSAL_CLIENT_ID, MSAL_TENANT_ID } from "../../constants/servicePrinciple";
+import { FRONTEND_BASE_URL, MSAL_CLIENT_ID, MSAL_TENANT_ID } from "../../constants/servicePrinciple.ts";
 
 /**
  * Configuration object to be passed to MSAL instance on creation.

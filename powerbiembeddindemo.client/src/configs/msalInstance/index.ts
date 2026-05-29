@@ -58,9 +58,7 @@ export const getAccessToken = async () => {
     try {
       const response = await msalInstance.acquireTokenPopup(request);
       // Only log access tokens in non-production environments for debugging.
-      if (process.env.NODE_ENV !== "production") {
-        console.log("Access token (acquireTokenPopup):", response.accessToken);
-      }
+
       return response.accessToken;
     } catch (popupError) {
       console.error("Popup token acquisition failed:", popupError);

@@ -1,13 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/powerbiLib/personalization.ts
 import { models } from "powerbi-client";
 
 /**
  * Apply personalized filters to a report
  */
-export const applyPersonalizedFilters = async (
-  embeddedReport: any,
-  filters: models.IFilter[]
-) => {
+export const applyPersonalizedFilters = async (embeddedReport: any, filters: models.IFilter[]) => {
   try {
     await embeddedReport.setFilters(filters);
     console.log("Personalized filters applied successfully");
@@ -21,7 +19,7 @@ export const applyPersonalizedFilters = async (
  * Get current report state for personalization
  */
 export const getReportPersonalizationState = async (
-  embeddedReport: any
+  embeddedReport: any,
 ): Promise<{
   filters: models.IFilter[];
   bookmarks: any[];
@@ -62,21 +60,17 @@ export const clearAllFilters = async (embeddedReport: any) => {
 /**
  * Apply specific filter to a table column
  */
-export const applyColumnFilter = async (
-  embeddedReport: any,
-  tableName: string,
-  columnName: string,
-  values: any[]
-) => {
+export const applyColumnFilter = async (embeddedReport: any, tableName: string, columnName: string, values: any[]) => {
   const filter: models.IFilter = {
     $schema: "http://powerbi.com/product/schema#basic",
     target: {
       table: tableName,
       column: columnName,
-    } as any,
-    operator: "In",
+    },
+    filterType: models.FilterType.Basic,
+    // operator: "In",
     values,
-  };
+  } as unknown as models.IFilter;
 
   await applyPersonalizedFilters(embeddedReport, [filter]);
 };
@@ -84,17 +78,10 @@ export const applyColumnFilter = async (
 /**
  * Remove specific filter
  */
-export const removeFilter = async (
-  embeddedReport: any,
-  tableName: string,
-  columnName: string
-) => {
+export const removeFilter = async (embeddedReport: any, tableName: string, columnName: string) => {
   try {
     const currentFilters = await embeddedReport.getFilters();
-    const updatedFilters = currentFilters.filter(
-      (f: any) =>
-        !(f.target.table === tableName && f.target.column === columnName)
-    );
+    const updatedFilters = currentFilters.filter((f: any) => !(f.target.table === tableName && f.target.column === columnName));
     await embeddedReport.setFilters(updatedFilters);
     console.log(`Filter removed: ${tableName}.${columnName}`);
   } catch (error) {
@@ -108,7 +95,7 @@ export const removeFilter = async (
  */
 export const getVisualCalculations = async (
   embeddedReport: any,
-  pageName: string
+  pageName: string,
 ): Promise<
   Array<{
     id: string;
@@ -131,9 +118,7 @@ export const getVisualCalculations = async (
     }
 
     if (typeof page.getVisuals !== "function") {
-      console.warn(
-        `Visual metadata is unavailable for page ${pageName} in this embed context`
-      );
+      console.warn(`Visual metadata is unavailable for page ${pageName} in this embed context`);
       return [];
     }
 
@@ -156,10 +141,7 @@ export const getVisualCalculations = async (
 /**
  * Switch report between view and edit modes
  */
-export const setReportMode = async (
-  embeddedReport: any,
-  mode: "view" | "edit"
-) => {
+export const setReportMode = async (embeddedReport: any, mode: "view" | "edit") => {
   try {
     if (!embeddedReport || typeof embeddedReport.switchMode !== "function") {
       throw new Error("Embedded report is not ready to switch modes");
@@ -174,21 +156,16 @@ export const setReportMode = async (
     }
   } catch (error) {
     console.error(`Error switching to ${mode} mode:`, error);
-    const rawMessage =
-      (error as any)?.detailedMessage ||
-      (error as any)?.message ||
-      "Failed to switch report mode";
+    const rawMessage = (error as any)?.detailedMessage || (error as any)?.message || "Failed to switch report mode";
 
-    if (
-      mode === "edit" &&
-      String(rawMessage).toLowerCase().includes("insufficientpermissions")
-    ) {
+    if (mode === "edit" && String(rawMessage).toLowerCase().includes("insufficientpermissions")) {
       throw new Error(
-        "Edit mode is not allowed for this report. Ensure your account has Member/Contributor access to the workspace and report edit permissions."
+        "Edit mode is not allowed for this report. Ensure your account has Member/Contributor access to the workspace and report edit permissions.",
+        { cause: error },
       );
     }
 
-    throw new Error(String(rawMessage));
+    throw new Error(String(rawMessage), { cause: error });
   }
 };
 
@@ -211,9 +188,7 @@ export const saveReportChanges = async (embeddedReport: any) => {
 /**
  * Export report state as JSON
  */
-export const exportReportState = async (
-  embeddedReport: any
-): Promise<string> => {
+export const exportReportState = async (embeddedReport: any): Promise<string> => {
   try {
     const state = await getReportPersonalizationState(embeddedReport);
     return JSON.stringify(state, null, 2);
@@ -226,10 +201,7 @@ export const exportReportState = async (
 /**
  * Import and apply report state from JSON
  */
-export const importReportState = async (
-  embeddedReport: any,
-  stateJson: string
-) => {
+export const importReportState = async (embeddedReport: any, stateJson: string) => {
   try {
     const state = JSON.parse(stateJson);
     if (state.filters) {

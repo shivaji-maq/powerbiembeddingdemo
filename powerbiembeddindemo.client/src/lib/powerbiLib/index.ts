@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import type { WorkSpace, SemanticModel, Report } from "./@types";
 
@@ -28,16 +29,16 @@ export const fetchUserWorkspaces = async (token: string): Promise<WorkSpace[]> =
         "content-type": "application/json",
       },
     });
-    
+
     const data = response.data?.value || [];
     console.log("[fetchUserWorkspaces] Raw API response:", data);
-    
+
     // Map the API response and ensure isReadOnly is set correctly
     const workspaces: WorkSpace[] = data.map((ws: any) => {
       // Check if workspace has edit permissions based on type and other properties
       // Default isReadOnly to false unless specifically marked as read-only
       const isReadOnly = ws.type === "Personal" || ws.isReadOnly === true || false;
-      
+
       return {
         id: ws.id,
         name: ws.name,
@@ -45,7 +46,7 @@ export const fetchUserWorkspaces = async (token: string): Promise<WorkSpace[]> =
         isReadOnly: isReadOnly,
       } as WorkSpace;
     });
-    
+
     console.log("[fetchUserWorkspaces] Mapped workspaces:", workspaces);
     return workspaces;
   } catch (error) {
@@ -77,9 +78,9 @@ export const fetchSemanticModelsOfWorkspace = async (token: string, groupId: str
     return sortedData;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      throw new Error(`Failed to fetch report data. Status: ${error.response?.status} , Message: ${error.message}`);
+      throw new Error(`Failed to fetch report data. Status: ${error.response?.status} , Message: ${error.message}`, { cause: error });
     } else {
-      throw new Error("Failed to fetch report data." + (error as Error).message);
+      throw new Error("Failed to fetch report data." + (error as Error).message, { cause: error });
     }
   }
 };
@@ -106,9 +107,9 @@ export const fetchReportsForWorkspace = async (token: string, workspaceId: strin
     return reportData.sort((a: Report, b: Report) => a?.name.localeCompare(b?.name));
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      throw new Error(`Failed to fetch report data. Status: ${error.response?.status} , Message: ${error.message}`);
+      throw new Error(`Failed to fetch report data. Status: ${error.response?.status} , Message: ${error.message}`, { cause: error });
     } else {
-      throw new Error("Failed to fetch report data." + (error as Error).message);
+      throw new Error("Failed to fetch report data." + (error as Error).message, { cause: error });
     }
   }
 };
