@@ -1,0 +1,6 @@
+@powerbiembeddindemo.Server_HostAddress = http://localhost:5181
+
+GET {{powerbiembeddindemo.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

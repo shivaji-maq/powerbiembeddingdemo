@@ -1,0 +1,128 @@
+# ===============================
+# Node.js / npm
+# ===============================
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn.lock
+yarn-error.log*
+dist/
+build/
+
+# ===============================
+# .NET / C#
+# ===============================
+bin/
+obj/
+*.csproj.user
+*.sln.user
+.vs/
+
+# ===============================
+# Environment variables (IMPORTANT)
+# ===============================
+.env
+.env.*
+!.env.example
+
+# ===============================
+# OS files
+# ===============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===============================
+# IDE / Editor
+# ===============================
+.vscode/
+.idea/
+*.suo
+*.code-workspace
+
+# ===============================
+# Logs
+# ===============================
+*.log
+error.log
+debug.log
+
+# ===============================
+# Temporary files
+# ===============================
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ===============================
+# Dependencies
+# ===============================
+packages/
+
+# ===============================
+# Azure / CLI
+# ===============================
+.azure/
+.azurerc
+commandIndex.json
+az_survey.json
+altimate.json
+survey.json
+
+# ===============================
+# Copilot / AI tools
+# ===============================
+.copilot/
+.copilot-index/
+.index/
+*.index.json
+.vscode-copilot/
+.github-copilot/
+copilot-cache/
+.copilot-cache/
+
+# ===============================
+# VS Code cache
+# ===============================
+.vscode/cache/
+.vscode/.history/
+.vscode/extensions/
+
+# ===============================
+# Visual Studio cache
+# ===============================
+slnx.sqlite
+ProjectEvaluation/
+sd/
+
+# ===============================
+# Backup / user files
+# ===============================
+*.bak
+*.backup
+
+# ===============================
+# Sensitive service config (Power BI / Azure)
+# ===============================
+powerbiembeddindemo.client/src/constants/servicePrinciple.ts
+
+# ===============================
+# Power BI
+# ===============================
+.pbix.backup
+*.pbix~
+
+# ===============================
+# Environment variables
+# ===============================
+.env
+.env.*
+!.env.example

@@ -1,0 +1,392 @@
+/* Modal Overlay */
+.qvc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: qvc-fade-in 0.2s ease;
+}
+
+@keyframes qvc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal Container */
+.qvc-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  animation: qvc-slide-up 0.25s ease;
+}
+
+@keyframes qvc-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Header */
+.qvc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.qvc-modal-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.qvc-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.qvc-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* Body */
+.qvc-modal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+/* Options Panel */
+.qvc-options-panel {
+  width: 340px;
+  min-width: 340px;
+  padding: 20px 24px;
+  overflow-y: auto;
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Sections */
+.qvc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qvc-section.qvc-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.qvc-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #555;
+  letter-spacing: 0.5px;
+}
+
+/* Select Dropdowns */
+.qvc-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  appearance: auto;
+}
+
+.qvc-select:focus {
+  outline: none;
+  border-color: #1a237e;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.1);
+}
+
+.qvc-select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+/* Field Rows */
+.qvc-fields-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qvc-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qvc-field-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.qvc-field-select {
+  font-size: 0.9rem;
+}
+
+/* Properties */
+.qvc-properties-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Toggle Rows */
+.qvc-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.qvc-toggle-row span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.qvc-toggle-row.qvc-toggle-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Switch */
+.qvc-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.qvc-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.qvc-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 22px;
+}
+
+.qvc-slider::before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.qvc-switch input:checked + .qvc-slider {
+  background-color: #1a237e;
+}
+
+.qvc-switch input:checked + .qvc-slider::before {
+  transform: translateX(18px);
+}
+
+.qvc-switch input:disabled + .qvc-slider {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+}
+
+/* Title Input */
+.qvc-title-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.qvc-title-input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.qvc-title-input:focus {
+  outline: none;
+  border-color: #1a237e;
+}
+
+.qvc-title-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.qvc-erase-btn {
+  background: none;
+  border: 1px solid #d0d0d0;
+  border-radius: 5px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #666;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.qvc-erase-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.qvc-erase-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Alignment */
+.qvc-alignment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qvc-alignment-row > span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.qvc-alignment-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.qvc-align-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.qvc-align-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.qvc-align-btn.qvc-align-active {
+  background: #1a237e;
+  color: #fff;
+  border-color: #1a237e;
+}
+
+.qvc-align-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Preview Area */
+.qvc-preview-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #fafafa;
+  min-height: 400px;
+}
+
+.qvc-preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  text-align: center;
+  gap: 12px;
+}
+
+.qvc-preview-placeholder.active {
+  color: #1a237e;
+}
+
+.qvc-preview-placeholder p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.qvc-pencil-icon {
+  font-size: 3rem;
+  color: #ccc;
+}
+
+/* Footer */
+.qvc-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.qvc-create-btn {
+  background: #1a237e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 32px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.qvc-create-btn:hover:not(:disabled) {
+  background: #283593;
+}
+
+.qvc-create-btn:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+}

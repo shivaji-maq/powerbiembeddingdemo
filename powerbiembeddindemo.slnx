@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="powerbiembeddindemo.client/powerbiembeddindemo.client.esproj">
+  </Project>
+  <Project Path="powerbiembeddindemo.Server/powerbiembeddindemo.Server.csproj" />
+</Solution>

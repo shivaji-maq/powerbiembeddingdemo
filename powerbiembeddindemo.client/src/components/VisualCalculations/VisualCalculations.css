@@ -1,0 +1,137 @@
+/* components/VisualCalculations/VisualCalculations.css */
+
+.visual-calculations {
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  margin-top: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.visual-calculations.loading,
+.visual-calculations.error {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.visual-calculations.error {
+  color: #d32f2f;
+  background-color: #ffebee;
+}
+
+.visual-calculations-header {
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 12px;
+}
+
+.visual-calculations-header h3 {
+  margin: 0 0 8px 0;
+  color: #1976d2;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.visual-count {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.no-visuals {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-style: italic;
+}
+
+.calculations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.calculation-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.calculation-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.calculation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.calculation-header h4 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  word-break: break-word;
+}
+
+.visual-type {
+  background-color: #1976d2;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.calculation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.detail-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #1976d2;
+  font-family: "Courier New", monospace;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .calculations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calculation-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .visual-type {
+    align-self: flex-start;
+    margin-left: 0;
+  }
+}

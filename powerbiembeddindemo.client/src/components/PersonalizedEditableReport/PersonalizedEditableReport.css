@@ -1,0 +1,589 @@
+/* components/PersonalizedEditableReport/PersonalizedEditableReport.css */
+
+.personalized-editable-report {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.report-toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.toolbar-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primary-actions {
+  min-width: auto;
+}
+
+.bookmark-controls {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.edit-actions {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.bookmark-select {
+  height: 32px;
+  min-width: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  font-size: 0.8rem;
+  padding: 0 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 20px;
+  padding-right: 32px;
+}
+
+.bookmark-select:hover {
+  border-color: #1976d2;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.12);
+}
+
+.bookmark-select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 2px 12px rgba(25, 118, 210, 0.2);
+}
+
+.bookmark-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-delete-bookmark {
+  padding: 6px 8px;
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border: 1px solid #e57373;
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-delete-bookmark:hover:not(:disabled) {
+  background-color: #ef5350;
+  color: #fff;
+  border-color: #d32f2f;
+}
+
+.btn-delete-bookmark:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-refresh-bookmarks {
+  padding: 6px 8px;
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border: 1px solid #81c784;
+  background-color: #f1f8e9;
+  color: #2e7d32;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-refresh-bookmarks:hover {
+  background-color: #7cb342;
+  color: #fff;
+  border-color: #558b2f;
+}
+
+.toolbar-meta {
+  padding-top: 6px;
+  border-top: 1px solid rgba(60, 90, 140, 0.15);
+}
+
+.bookmark-status {
+  font-size: 12px;
+  color: #203a64;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #c3d1e4;
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.quick-visual-status {
+  font-size: 12px;
+  color: #3e2600;
+  background: rgba(255, 248, 220, 0.92);
+  border: 1px solid #e2cb91;
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.auto-save-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.auto-save-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.save-status {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.save-status.saving {
+  color: #f57c00;
+  background-color: #fff3e0;
+  animation: pulse 1s infinite;
+}
+
+.save-status.saved {
+  color: #388e3c;
+  background-color: #e8f5e9;
+}
+
+.save-status.error {
+  color: #d32f2f;
+  background-color: #ffebee;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.last-saved {
+  font-size: 12px;
+  color: #666;
+  padding: 4px 8px;
+  border-left: 2px solid #1976d2;
+  padding-left: 10px;
+}
+
+.report-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.authoring-report-container {
+  position: fixed;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  opacity: 0.01;
+  pointer-events: none;
+  left: -20000px;
+  top: 0;
+}
+
+.authoring-report-embed {
+  width: 1280px;
+  height: 720px;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.spinner {
+  padding: 20px 40px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-bookmark-save {
+  background-color: #1f7a63;
+  color: #fff;
+  border: 1px solid #1a6450;
+}
+
+.btn-bookmark-save:hover:not(:disabled) {
+  background-color: #176650;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.bookmark-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 64px;
+  background: rgba(9, 24, 45, 0.45);
+}
+
+.bookmark-modal {
+  width: min(480px, 92vw);
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #d6dfec;
+  box-shadow: 0 18px 50px rgba(10, 20, 48, 0.3);
+  padding: 18px 18px 14px;
+}
+
+.bookmark-modal h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #163455;
+}
+
+.bookmark-modal p {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  color: #4b607e;
+}
+
+.bookmark-modal-input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #b9c8de;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #183553;
+  background: #fdfefe;
+}
+
+.bookmark-modal-input:focus {
+  outline: none;
+  border-color: #2e7dd7;
+  box-shadow: 0 0 0 3px rgba(46, 125, 215, 0.18);
+}
+
+.bookmark-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-modal-cancel {
+  background: #eef2f7;
+  color: #2a3f59;
+}
+
+.btn-modal-cancel:hover:not(:disabled) {
+  background: #dfe8f2;
+}
+
+.btn-modal-save {
+  background: #1976d2;
+  color: #fff;
+}
+
+.btn-modal-save:hover:not(:disabled) {
+  background: #125ea8;
+}
+
+.quick-visual-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 50px;
+  background: rgba(16, 29, 49, 0.5);
+}
+
+.quick-visual-modal {
+  width: min(760px, 94vw);
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #d6dfec;
+  box-shadow: 0 20px 48px rgba(10, 20, 48, 0.32);
+  padding: 18px 18px 14px;
+}
+
+.quick-visual-modal h3 {
+  margin: 0;
+  font-size: 19px;
+  color: #1d3859;
+}
+
+.quick-visual-modal p {
+  margin: 8px 0 14px;
+  font-size: 13px;
+  color: #4a5f7d;
+}
+
+.quick-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.quick-visual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.quick-visual-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.quick-visual-empty-fields {
+  font-size: 12px;
+  color: #8a5a13;
+  border: 1px dashed #e1bf8d;
+  background: #fff7ec;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.quick-visual-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2f4665;
+}
+
+.quick-visual-field select,
+.quick-visual-field input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #b9c8de;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  color: #173451;
+  background: #fff;
+}
+
+.quick-visual-field select:focus,
+.quick-visual-field input:focus {
+  outline: none;
+  border-color: #2e7dd7;
+  box-shadow: 0 0 0 3px rgba(46, 125, 215, 0.18);
+}
+
+.quick-visual-toggles {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.quick-visual-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2c405b;
+}
+
+.quick-visual-toggles label.disabled {
+  opacity: 0.55;
+}
+
+.quick-visual-toggles input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.quick-visual-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-quick-visual-apply {
+  background: #be6a15;
+  color: #fff;
+}
+
+.btn-quick-visual-apply:hover:not(:disabled) {
+  background: #98530f;
+}
+
+@media (max-width: 1024px) {
+  .report-toolbar {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .toolbar-row {
+    gap: 10px;
+  }
+
+  .bookmark-select {
+    min-width: 120px;
+  }
+
+  .last-saved {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .personalized-editable-report {
+    height: auto;
+  }
+
+  .report-toolbar {
+    gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .toolbar-row {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .toolbar-cluster,
+  .primary-actions,
+  .bookmark-controls,
+  .edit-actions,
+  .toolbar-meta {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .bookmark-controls {
+    gap: 6px;
+  }
+
+  .bookmark-select {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .report-container {
+    min-height: 500px;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  .auto-save-toggle {
+    font-size: 13px;
+  }
+
+  .save-status {
+    font-size: 12px;
+  }
+
+  .bookmark-modal-backdrop {
+    align-items: center;
+    padding: 10px;
+  }
+
+  .quick-visual-modal-backdrop {
+    align-items: center;
+    padding: 10px;
+  }
+
+  .quick-visual-grid,
+  .quick-visual-toggles {
+    grid-template-columns: 1fr;
+  }
+}
