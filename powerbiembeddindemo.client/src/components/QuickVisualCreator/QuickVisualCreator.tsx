@@ -23,6 +23,7 @@ interface QuickVisualCreatorProps {
   datasetId: string;
   workspaceId: string;
   tokenType?: "Aad" | "Embed";
+  onReady?: (report: any, page: any) => void;
 }
 
 interface BaseReportState {
@@ -31,7 +32,7 @@ interface BaseReportState {
   visuals: any[];
 }
 
-export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, reportId, tokenType = "Aad" }: QuickVisualCreatorProps, ref) {
+export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, reportId, tokenType = "Aad", onReady }: QuickVisualCreatorProps, ref) {
   const dispatch = useDispatch();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,6 +85,10 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
       return true;
     },
     hasVisual: () => allVisualSnapshotsRef.current.length > 0,
+    getReportAndPage: () => {
+      const state = baseStateRef.current;
+      return { report: state.report, page: state.page };
+    },
   }), [dispatch]);
 
   // Base report configuration - memoized to prevent re-embed on every render
@@ -235,13 +240,15 @@ export default forwardRef(function QuickVisualCreator({ accessToken, embedUrl, r
         await rearrangeInCustomLayout(report, activePage, visuals);
         setIsLoading(false);
 
+        onReady?.(report, activePage);
+
         extractFieldsFromVisuals(visuals);
       } catch (e) {
         console.error("Error on base report rendered:", e);
         setIsLoading(false);
       }
     },
-    [rearrangeInCustomLayout, updateBaseState]
+    [rearrangeInCustomLayout, updateBaseState, onReady]
   );
 
   // Fallback: extract fields from existing visuals in the report

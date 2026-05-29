@@ -7,7 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchReports, fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
 import { removeBookmark } from "./redux/slices/bookmarkSlice/bookmarkSlice";
 import { PersonalizedEditableReport } from "./components/PersonalizedEditableReport/PersonalizedEditableReport";
-import { QuickVisualCreator } from "./components/QuickVisualCreator";
+import { QuickVisualCreator, LayoutCustomizer } from "./components/QuickVisualCreator";
+import type { LayoutCustomizerHandle } from "./components/QuickVisualCreator";
 import { getAccessToken } from "./configs/msalInstance";
 import type { RootState, AppDispatch } from "./redux/store";
 
@@ -42,6 +43,8 @@ function App() {
   const [authError, setAuthError] = useState<string>("");
   const [mode, setMode] = useState<"viewer" | "creator">("viewer");
   const [selectedBookmarkId, setSelectedBookmarkId] = useState("");
+  const [layoutReport, setLayoutReport] = useState<any>(null);
+  const [layoutPage, setLayoutPage] = useState<any>(null);
   const bookmarks = useSelector((state: RootState) => state.bookmarks.bookmarks);
   const { isAuthenticated, user, account, error: authHookError } = useAuth();
   const { workspaces, fetchingWorkspaces, fetchingReports, reports, errorInWorkspace } = useSelector(
@@ -51,6 +54,7 @@ function App() {
 
   const reportRef = useRef<any>(null);
   const quickVisualCreatorRef = useRef<any>(null);
+  const layoutCustomizerRef = useRef<LayoutCustomizerHandle>(null);
 
   useEffect(() => {
     console.log("App mounted, isAuthenticated:", isAuthenticated);
@@ -330,6 +334,7 @@ function App() {
                             ↻
                           </button>
                         </div>
+
                       </div>
                       <button
                         className="primary-btn"
@@ -349,6 +354,7 @@ function App() {
                     />
                   </>
                 ) : (
+                  <>
                   <PersonalizedEditableReport
                     key={`${selectedWorkspace.id}_${selectedReport.id}`}
                     reportRef={reportRef}
@@ -364,6 +370,12 @@ function App() {
                       addCustomFunctionsInEmbeddedReport(report);
                       reportRef.current = report;
                     }}
+                    onReportReady={(report, page) => {
+                      setLayoutReport((prev: any) => (prev === report ? prev : report));
+                      setLayoutPage((prev: any) =>
+                        prev?.name === page?.name ? prev : page
+                      );
+                    }}
                     toggleButton={
                       <button
                         className="primary-btn"
@@ -372,7 +384,14 @@ function App() {
                         Quick Visual Creator
                       </button>
                     }
+                    layoutControls={
+                      layoutReport && layoutPage ? (
+                        <LayoutCustomizer ref={layoutCustomizerRef} report={layoutReport} page={layoutPage} />
+                      ) : null
+                    }
+                    layoutCustomizerRef={layoutCustomizerRef}
                   />
+                  </>
                 )}
               </>
             ) : (
