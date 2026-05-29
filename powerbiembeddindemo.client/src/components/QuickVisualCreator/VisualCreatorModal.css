@@ -368,6 +368,30 @@
   border-top: 1px solid #e8e8e8;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.qvc-bookmark-btn {
+  background: transparent;
+  color: #1a237e;
+  border: 1.5px solid #1a237e;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.qvc-bookmark-btn:hover:not(:disabled) {
+  background: #e8eaf6;
+}
+
+.qvc-bookmark-btn:disabled {
+  border-color: #bbb;
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 .qvc-create-btn {

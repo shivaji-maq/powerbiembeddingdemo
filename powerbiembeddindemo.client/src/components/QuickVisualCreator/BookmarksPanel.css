@@ -1,0 +1,130 @@
+.bookmarks-panel {
+  padding: 12px 0;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.bookmarks-title {
+  margin: 0 0 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a237e;
+}
+
+.bookmarks-empty {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 16px;
+}
+
+.bookmarks-list {
+  display: flex;
+  gap: 12px;
+  padding: 0 16px;
+  flex-wrap: wrap;
+}
+
+.bookmark-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fafafa;
+  transition: box-shadow 0.2s;
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.bookmark-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.bookmark-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.bookmark-type {
+  font-size: 0.75rem;
+  background: #e3e8ff;
+  color: #1a237e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.bookmark-card-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.bookmark-field-tag {
+  font-size: 0.75rem;
+  background: #f0f0f0;
+  color: #555;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.bookmark-card-meta {
+  margin-bottom: 8px;
+}
+
+.bookmark-date {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.bookmark-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bookmark-load-btn {
+  flex: 1;
+  background: #1a237e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bookmark-load-btn:hover {
+  background: #283593;
+}
+
+.bookmark-delete-btn {
+  background: transparent;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.bookmark-delete-btn:hover {
+  background: #d32f2f;
+  color: #fff;
+}

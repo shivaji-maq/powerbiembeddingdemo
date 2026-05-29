@@ -52,6 +52,23 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
   const columnFields = useMemo(() => datasetFields.filter((f) => f.type === "column"), [datasetFields]);
   const measureFields = useMemo(() => datasetFields.filter((f) => f.type === "measure"), [datasetFields]);
 
+  const getFieldsForRole = useCallback(
+    (dataRoleLabel: string, dataRoleName: string): DatasetField[] => {
+      // Keep field choices compatible with role expectations to avoid API addDataField failures.
+      if (dataRoleName === "Y" || dataRoleLabel === "Values") {
+        return [...measureFields];
+      }
+      if (dataRoleName === "Category" || dataRoleName === "Series" || dataRoleLabel === "Axis" || dataRoleLabel === "Legend") {
+        return [...columnFields];
+      }
+      if (dataRoleName === "Tooltips") {
+        return [...measureFields, ...columnFields];
+      }
+      return [...columnFields, ...measureFields];
+    },
+    [columnFields, measureFields]
+  );
+
   const getVisualLayout = () => ({
     width: 1240,
     height: 680,
@@ -113,16 +130,13 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
   );
 
   const handleDataFieldChange = useCallback(
-    async (dataRole: string, fieldIdentifier: string) => {
+    async (dataRoleName: string, fieldIdentifier: string) => {
       if (!state.newVisual) return;
+      if (!dataRoleName) return;
 
       const isReset = !fieldIdentifier || fieldIdentifier === "";
 
       try {
-        const capabilities = await state.newVisual.getCapabilities();
-        const dataRoleName = capabilities.dataRoles.find((dr: any) => dr.displayName === dataRole)?.name;
-        if (!dataRoleName) return;
-
         if (isReset) {
           if (state.dataRoles[dataRoleName]) {
             await state.newVisual.removeDataField(dataRoleName, 0);
@@ -136,6 +150,12 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
         }
 
         const [table, name, type] = fieldIdentifier.split("||");
+
+        // Defensive check: value role should always be a measure in this flow.
+        if (dataRoleName === "Y" && type !== "measure") {
+          return;
+        }
+
         const dataFieldTarget = buildDataFieldTarget({ table, name, type: type as "column" | "measure" });
 
         if (state.dataRoles[dataRoleName]) {
@@ -155,7 +175,7 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
           }));
         }
       } catch (e) {
-        console.error("Error updating data field:", e);
+        console.error(`Error updating data field for role ${dataRoleName}:`, e);
       }
     },
     [state.newVisual, state.dataRoles, state.dataFieldsCount],
@@ -213,26 +233,25 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
     [state.newVisual],
   );
 
+  const buildFinalState = (): VisualCreatorState => ({
+    ...state,
+    properties: {
+      ...state.properties,
+      titleText: customTitle || null,
+      titleAlign: titleAlignment,
+    },
+  });
+
   const handleCreate = () => {
-    const finalState = {
-      ...state,
-      properties: {
-        ...state.properties,
-        titleText: customTitle || null,
-        titleAlign: titleAlignment,
-      },
-    };
-    onCreateVisual(finalState);
+    onCreateVisual(buildFinalState());
     handleClose();
   };
 
   const handleClose = () => {
     if (state.newVisual && authoringPage) {
-      try {
-        authoringPage.deleteVisual(state.newVisual.name);
-      } catch (e) {
-        console.error("Error cleaning up visual:", e);
-      }
+      authoringPage.deleteVisual(state.newVisual.name).catch(() => {
+        // Visual may already be gone — ignore
+      });
     }
     setState({ ...initialState });
     setCustomTitle("");
@@ -282,14 +301,18 @@ export default function VisualCreatorModal({ isOpen, onClose, onCreateVisual, re
               <span className="qvc-section-title">Set your fields</span>
               <div className="qvc-fields-container">
                 {currentVisualInfo?.dataRoles.map((dataRole, idx) => {
-                  const fieldsForRole = dataRole === "Values" ? [...measureFields, ...columnFields] : [...columnFields, ...measureFields];
+                  const dataRoleName = currentVisualInfo.dataRoleNames[idx];
+                  if (!dataRoleName) return null;
+
+                  const fieldsForRole = getFieldsForRole(dataRole, dataRoleName);
+
                   return (
-                    <div key={idx} className="qvc-field-row">
+                    <div key={dataRoleName} className="qvc-field-row">
                       <span className="qvc-field-label">{dataRole}</span>
                       <select
                         className="qvc-select qvc-field-select"
                         disabled={!state.visualType}
-                        onChange={(e) => handleDataFieldChange(dataRole, e.target.value)}
+                        onChange={(e) => handleDataFieldChange(dataRoleName, e.target.value)}
                         defaultValue=""
                       >
                         <option value="">Select {dataRole}</option>

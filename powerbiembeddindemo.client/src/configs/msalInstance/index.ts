@@ -91,6 +91,5 @@ export const getAppModeAccessKeyUtil = async (tenantId: string, clientId: string
   }
 
   const data = await response.json();
-  console.log("getAppModeAccessKeyUtil", data);
   return data.access_token; // ⬅️ This is your Microsoft Access Token
 };

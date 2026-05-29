@@ -1,6 +1,7 @@
 import AuthReducer from "./authSlice/authSlice";
 import { combineReducers } from "redux";
 import powerBIReducer from "./powerBISlice/powerBISlice";
+import bookmarkReducer from "./bookmarkSlice/bookmarkSlice";
 /**
  * @module redux/slices/index
  *
@@ -17,6 +18,7 @@ import powerBIReducer from "./powerBISlice/powerBISlice";
 const rootReducer = combineReducers({
   auth: AuthReducer,
   powerBI: powerBIReducer,
+  bookmarks: bookmarkReducer,
 });
 
 export default rootReducer;
