@@ -16,6 +16,13 @@ export interface BookmarkedVisual {
   name: string;
   visuals: VisualSnapshot[]; // all visuals captured at save time
   createdAt: number;
+  layoutState?: {
+    selectedVisuals: string[];
+    layoutType: string;
+    columns: number;
+    spanType: number;
+    isCustomLayoutActive: boolean;
+  };
 }
 
 export interface BookmarkSliceState {

@@ -21,6 +21,9 @@ interface PersonalizedEditableReportProps {
   reportSettings?: any;
   onReportLoadReportAttachmentFunction?: (report: any) => void;
   toggleButton?: React.ReactNode;
+  layoutControls?: React.ReactNode;
+  onReportReady?: (report: any, page: any) => void;
+  layoutCustomizerRef?: React.RefObject<any>;
 }
 
 interface BookmarkProfile {
@@ -32,6 +35,7 @@ interface BookmarkProfile {
   bookmarkStateJson?: string;
   createdAt: string;
   updatedAt: string;
+  layoutState?: any;
 }
 
 const SAVED_BOOKMARK_PREFIX = "saved:";
@@ -722,6 +726,9 @@ export const PersonalizedEditableReport: React.FC<
   reportSettings: customReportSettings,
   onReportLoadReportAttachmentFunction,
   toggleButton,
+  layoutControls,
+  onReportReady,
+  layoutCustomizerRef,
 }) => {
   const internalReportRef = useRef<any>(null);
   const authoringReportRef = useRef<any>(null);
@@ -1168,7 +1175,8 @@ export const PersonalizedEditableReport: React.FC<
       bookmarkName: string,
       bookmarkStateJson: string,
       selectAfterUpsert = false,
-      mode: CapturedBookmarkUpsertMode = "syncApplied"
+      mode: CapturedBookmarkUpsertMode = "syncApplied",
+      layoutState?: any
     ) => {
       if (!bookmarkStateJson) {
         return null;
@@ -1222,6 +1230,7 @@ export const PersonalizedEditableReport: React.FC<
         bookmarkStateJson,
         createdAt: existingBookmark?.createdAt || now,
         updatedAt: now,
+        layoutState: layoutState ?? existingBookmark?.layoutState,
       };
 
       const nextBookmarks = [
@@ -3182,11 +3191,15 @@ export const PersonalizedEditableReport: React.FC<
         throw new Error("Unable to capture the current report view.");
       }
 
+      // Capture current layout customizer state
+      const layoutState = layoutCustomizerRef?.current?.getLayoutState?.() ?? undefined;
+
       const nextBookmark = upsertCapturedBookmark(
         bookmarkName,
         bookmarkStateJson,
         false,
-        "saveView"
+        "saveView",
+        layoutState
       );
       if (!nextBookmark) {
         throw new Error("Unable to save captured bookmark state.");
@@ -3226,6 +3239,11 @@ export const PersonalizedEditableReport: React.FC<
         return;
       }
 
+      // Reset layout customizer to default (all visuals selected, default layout)
+      if (layoutCustomizerRef?.current?.resetToDefault) {
+        layoutCustomizerRef.current.resetToDefault();
+      }
+
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus("Loaded original report view.");
       triggerAutoSaveRevision();
@@ -3250,8 +3268,18 @@ export const PersonalizedEditableReport: React.FC<
         return;
       }
 
+      // Apply PBI bookmark state first (filters, slicers, etc.)
       await applyBookmarkProfile(selectedBookmark);
       await syncVisibleStateToAuthoring();
+
+      // Then restore layout customizer state (applies custom layout on top)
+      if (selectedBookmark.layoutState && layoutCustomizerRef?.current?.setLayoutState) {
+        layoutCustomizerRef.current.setLayoutState(selectedBookmark.layoutState);
+      } else if (layoutCustomizerRef?.current?.resetToDefault) {
+        // No layout state saved — reset to default
+        layoutCustomizerRef.current.resetToDefault();
+      }
+
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus(`Loaded bookmark "${selectedBookmark.name}"`);
       return;
@@ -3536,6 +3564,9 @@ export const PersonalizedEditableReport: React.FC<
                 setCurrentPage(activePage.name);
               }
               await captureOriginalReportStateIfMissing();
+              if (onReportReady && reportRef.current && activePage) {
+                onReportReady(reportRef.current, activePage);
+              }
             } catch (error) {
               console.warn("Unable to read active page on render", error);
             }
@@ -3833,6 +3864,12 @@ export const PersonalizedEditableReport: React.FC<
           )}
         </div>
       </div>
+
+      {layoutControls && (
+        <div className="toolbar-row toolbar-layout-controls" style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0" }}>
+          {layoutControls}
+        </div>
+      )}
 
       <div className="report-container">
         <EmbedReport
