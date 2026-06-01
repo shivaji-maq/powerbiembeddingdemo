@@ -9,10 +9,17 @@ export interface ReportToEmbed {
 
 export const reportsToEmbed: ReportToEmbed[] = [
   {
-    reportId: "e479fe39-9d8e-4c72-82c2-eff7d065ce99",
+    reportId: "ddfd8090-0b57-4635-959a-3362aa2e444b",
     workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
     datasetId: "",
-    name: "Contoso Sales Report",
+    name: "Competitive Marketing Analysis",
+    isSecureEmbedded: false,
+  },
+  {
+    reportId: "b1189c3b-2f90-4ac1-a08c-8cccc9168bc6",
+    workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
+    datasetId: "",
+    name: "Artificial Intelligence Sample",
     isSecureEmbedded: false,
   },
   {
