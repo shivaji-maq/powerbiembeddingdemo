@@ -827,6 +827,57 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     return message;
   }, []);
 
+  const hasSameReportFilterTarget = useCallback((filter: any, targetFilter: any) => {
+    const filterTarget = filter?.target;
+    const target = targetFilter?.target;
+
+    return !!filterTarget && !!target && filterTarget.table === target.table && filterTarget.column === target.column;
+  }, []);
+
+  const mergeWithGlobalReportFilters = useCallback(
+    (currentFilters: models.IFilter[] = []) => {
+      if (!reportFilters || reportFilters.length === 0) {
+        return currentFilters;
+      }
+
+      return [
+        ...currentFilters.filter((filter) => !reportFilters.some((reportFilter) => hasSameReportFilterTarget(filter, reportFilter))),
+        ...reportFilters,
+      ];
+    },
+    [hasSameReportFilterTarget, reportFilters],
+  );
+
+  const applyGlobalReportFilters = useCallback(
+    async (delayMs = 0) => {
+      if (!reportRef.current || !reportFilters || reportFilters.length === 0) {
+        return;
+      }
+
+      if (delayMs > 0) {
+        await wait(delayMs);
+      }
+
+      if (!reportRef.current) {
+        return;
+      }
+
+      try {
+        let currentFilters: models.IFilter[] = [];
+        try {
+          currentFilters = (await reportRef.current.getFilters?.()) || [];
+        } catch (readError) {
+          console.warn("Unable to read filters before applying global report filters", readError);
+        }
+
+        await reportRef.current.setFilters(mergeWithGlobalReportFilters(currentFilters));
+      } catch (error) {
+        console.warn("Unable to apply global report filters", error);
+      }
+    },
+    [mergeWithGlobalReportFilters, reportFilters, reportRef],
+  );
+
   const getOriginalReportState = useCallback(() => {
     if (originalReportStateRef.current) {
       return originalReportStateRef.current;
@@ -1220,11 +1271,13 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         if (bookmarkTheme) {
           await applyReportTheme(bookmarkTheme.name, bookmarkTheme.mode, false);
         }
+
+        await applyGlobalReportFilters();
       } catch (error) {
         console.error("Error applying bookmark profile:", error);
       }
     },
-    [applyReportTheme, reportRef]
+    [applyGlobalReportFilters, applyReportTheme, reportRef]
   );
 
   const runWhenReportReady = useCallback(async <T,>(action: () => Promise<T>, retries = 5): Promise<T> => {
@@ -1416,6 +1469,8 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           if (safeLastSaved) {
             setLastSaved(safeLastSaved);
           }
+
+          await applyGlobalReportFilters();
         }
       } catch (error) {
         console.error("Error loading personalization:", error);
@@ -1482,12 +1537,14 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           }
         } else if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
           await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
+          await applyGlobalReportFilters();
           const activePage = await reportRef.current?.getActivePage?.();
           if (activePage?.name) {
             setCurrentPage(activePage.name);
           }
         } else if (isOriginalReportSelection(nextSelectionId)) {
           await restoreOriginalReportState();
+          await applyGlobalReportFilters();
         }
       } else {
         setSelectedBookmarkId("");
@@ -1509,6 +1566,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     getPersonalization,
     bookmarksStorageKey,
     applyBookmarkProfile,
+    applyGlobalReportFilters,
     applyReportTheme,
     runWhenReportReady,
     selectedBookmarkStorageKey,
@@ -3309,7 +3367,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       }
 
       try {
-        await reportRef.current.setFilters(reportFilters);
+        await applyGlobalReportFilters();
         const appliedFilters = await reportRef.current.getFilters?.();
         console.log("Applied global report filters", {
           requestedFilters: reportFilters,
@@ -3327,7 +3385,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     return () => {
       isCancelled = true;
     };
-  }, [isReportLoaded, reportFilters, reportRef]);
+  }, [applyGlobalReportFilters, isReportLoaded, reportFilters, reportRef]);
 
   const reportSettings: models.ISettings = {
     bars: {
@@ -3361,7 +3419,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     navContentPaneEnabled: true,
     bookmarksPaneEnabled: false,
     personalBookmarksEnabled: false,
-    persistentFiltersEnabled: true,
+    persistentFiltersEnabled: false,
     background: models.BackgroundType.Transparent,
     visualRenderedEvents: true,
     ...embedReportSettingsOverrides,

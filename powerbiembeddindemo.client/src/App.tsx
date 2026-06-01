@@ -112,6 +112,21 @@ const buildGlobalDateFilters = (target: GlobalDateFilterTarget | undefined, date
   ];
 };
 
+const hasSameFilterTarget = (filter: any, targetFilter: any) => {
+  const filterTarget = filter?.target;
+  const target = targetFilter?.target;
+
+  return !!filterTarget && !!target && filterTarget.table === target.table && filterTarget.column === target.column;
+};
+
+const mergeGlobalDateFilters = (currentFilters: models.IFilter[], globalFilters: models.ReportLevelFilters[]) => {
+  if (globalFilters.length === 0) {
+    return currentFilters;
+  }
+
+  return [...currentFilters.filter((filter) => !globalFilters.some((globalFilter) => hasSameFilterTarget(filter, globalFilter))), ...globalFilters];
+};
+
 // interface SelectedData {
 //   dataPoints: Array<{
 //     identity: Array<{
@@ -338,12 +353,25 @@ function App() {
     }
 
     try {
-      await reportRef.current.setFilters(filters);
-      const appliedFilters = await reportRef.current.getFilters?.();
-      console.log("Applied global date filter from Apply button", {
-        requestedFilters: filters,
-        appliedFilters,
-      });
+      let currentFilters: models.IFilter[] = [];
+      try {
+        currentFilters = (await reportRef.current.getFilters?.()) || [];
+      } catch (readError) {
+        console.warn("Unable to read existing filters before applying global date filter", readError);
+      }
+
+      await reportRef.current.setFilters(mergeGlobalDateFilters(currentFilters, filters));
+
+      try {
+        const appliedFilters = await reportRef.current.getFilters?.();
+        console.log("Applied global date filter from Apply button", {
+          requestedFilters: filters,
+          appliedFilters,
+        });
+      } catch (readError) {
+        console.warn("Global date filter applied, but unable to read filters afterward", readError);
+      }
+
       setGlobalDateStatus("Date filter applied.");
     } catch (error) {
       console.warn("Unable to apply global date filter from Apply button", error);
