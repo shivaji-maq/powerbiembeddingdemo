@@ -229,6 +229,7 @@ function App() {
 
         <aside className="sidebar">
           <div className="sidebar-section">
+            <h3 className="sidebar-title">Select Reports</h3>
             {reportsToEmbed.map((reportDetail) => (
               <div className="sidebar-list-item" key={reportDetail.reportId}>
                 <span className="sidebar-list-title" title={reportDetail.name}>

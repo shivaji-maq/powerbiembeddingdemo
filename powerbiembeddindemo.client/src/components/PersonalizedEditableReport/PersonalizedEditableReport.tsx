@@ -684,6 +684,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const authoringReportRef = useRef<any>(null);
   // FIX: Track the dedicated blank authoring page separately (showcase uses pages[1])
   const authoringPageRef = useRef<any>(null);
+  const themePickerRef = useRef<HTMLDivElement | null>(null);
   const reportRef = externalReportRef || internalReportRef;
   const customReportSettingsObject = (customReportSettings || {}) as Record<string, any>;
   const customQuickVisualFieldCatalog = Array.isArray(customReportSettingsObject.quickVisualFieldCatalog)
@@ -1031,6 +1032,25 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isThemeMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        themePickerRef.current &&
+        event.target instanceof Node &&
+        !themePickerRef.current.contains(event.target)
+      ) {
+        setIsThemeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isThemeMenuOpen]);
 
   useEffect(() => {
     if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization) {
@@ -3393,7 +3413,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           </div>
 
           <div className="toolbar-cluster theme-controls">
-            <div className="theme-picker">
+            <div className="theme-picker" ref={themePickerRef}>
               <button
                 type="button"
                 className="btn btn-theme-picker"
@@ -3401,7 +3421,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
                 aria-expanded={isThemeMenuOpen}
                 aria-haspopup="menu"
               >
-                Choose theme
+                Choose Theme
               </button>
 
               {isThemeMenuOpen && (
