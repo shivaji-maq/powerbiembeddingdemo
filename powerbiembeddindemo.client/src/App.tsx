@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { models } from "powerbi-client";
 import "./App.css";
-import logo from "./assets/logo.svg";
+import logo from "./assets/logo.png";
 import { useAuth } from "./hooks/useAuth";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
@@ -29,19 +29,19 @@ interface Report {
   datasetId?: string;
 }
 
-interface SelectedData {
-  dataPoints: Array<{
-    identity: Array<{
-      target: { column: string };
-      equals: string;
-    }>;
-  }>;
-}
+// interface SelectedData {
+//   dataPoints: Array<{
+//     identity: Array<{
+//       target: { column: string };
+//       equals: string;
+//     }>;
+//   }>;
+// }
 
 function App() {
   const [selectedReportRaw, setSelectedReportRaw] = useState<ReportToEmbed | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-
+  const [culture, setCulture] = useState<string>("en-US");
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkSpace | null>(null);
   const [accessKey, setAccessKey] = useState("");
   // const [wsFilter, setWsFilter] = useState("");
@@ -96,19 +96,25 @@ function App() {
   }, [dispatch, isAuthenticated, user, account, authHookError]);
 
   const settings = {
-    extensions: [
-      {
-        command: {
-          name: "addComment",
-          title: "Add Comment",
-          extend: {
-            visualOptionsMenu: {
-              title: "Add Comment",
-              menuLocation: models.MenuLocation.Top,
-            },
-          },
-        },
+    settings: {
+      localeSettings: {
+        language: culture, // Sets the display language (e.g., Spanish)
+        formatLocale: culture, // Sets regional format (e.g., currency/dates)
       },
+    },
+    extensions: [
+      // {
+      //   command: {
+      //     name: "addComment",
+      //     title: "Add Comment",
+      //     extend: {
+      //       visualOptionsMenu: {
+      //         title: "Add Comment",
+      //         menuLocation: models.MenuLocation.Top,
+      //       },
+      //     },
+      //   },
+      // },
       {
         command: {
           name: "changeVisual",
@@ -136,57 +142,57 @@ function App() {
     ],
   };
 
-  const addComment = async () => {
-    const selectedDataStr = window.localStorage.getItem("selectedData");
-    if (!selectedDataStr) {
-      alert("No data point selected.");
-      return;
-    }
+  // const addComment = async () => {
+  //   const selectedDataStr = window.localStorage.getItem("selectedData");
+  //   if (!selectedDataStr) {
+  //     alert("No data point selected.");
+  //     return;
+  //   }
 
-    let id: string | undefined;
-    const selectedData: SelectedData = JSON.parse(selectedDataStr);
-    selectedData.dataPoints[0].identity.forEach((iden) => {
-      if (iden.target.column === "Id") id = iden.equals;
-    });
-    const comment = prompt("Please add a comment for sales id: " + id);
+  //   let id: string | undefined;
+  //   const selectedData: SelectedData = JSON.parse(selectedDataStr);
+  //   selectedData.dataPoints[0].identity.forEach((iden) => {
+  //     if (iden.target.column === "Id") id = iden.equals;
+  //   });
+  //   const comment = prompt("Please add a comment for sales id: " + id);
 
-    if (!comment) {
-      alert("No comment provided.");
-      return;
-    }
+  //   if (!comment) {
+  //     alert("No comment provided.");
+  //     return;
+  //   }
 
-    fetch("https://localhost:44301/api/v1/Auth/UpdateComment", {
-      method: "post",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: id,
-        comment: comment,
-      }),
-    })
-      .then(async () => {
-        alert(`Saved comment: "${comment}" for the corresponding data.`);
-        if (reportRef.current && typeof reportRef.current.reload === "function") {
-          await reportRef.current.reload();
-        }
-      })
-      .catch((err: Error) => {
-        alert("error: " + err.message);
-      });
-  };
+  //   fetch("https://localhost:44301/api/v1/Auth/UpdateComment", {
+  //     method: "post",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       id: id,
+  //       comment: comment,
+  //     }),
+  //   })
+  //     .then(async () => {
+  //       alert(`Saved comment: "${comment}" for the corresponding data.`);
+  //       if (reportRef.current && typeof reportRef.current.reload === "function") {
+  //         await reportRef.current.reload();
+  //       }
+  //     })
+  //     .catch((err: Error) => {
+  //       alert("error: " + err.message);
+  //     });
+  // };
 
   const SelectADataPoint = (data: any): void => {
     window.localStorage.setItem("selectedData", JSON.stringify(data, null, 2));
     // setSelectedData(data);
   };
 
-  const handleCommandTriggered = (event: any): void => {
-    const commandDetails = event?.detail || {};
-    if (commandDetails.command === "addComment" || commandDetails.command === "Add Comment") {
-      void addComment();
-    }
-  };
+  // const handleCommandTriggered = (event: any): void => {
+  //   // const commandDetails = event?.detail || {};
+  //   // if (commandDetails.command === "addComment" || commandDetails.command === "Add Comment") {
+  //   //   void addComment();
+  //   // }
+  // };
 
   const handleDataSelected = (event: any): void => {
     const data = event?.detail;
@@ -195,8 +201,8 @@ function App() {
 
   const addCustomFunctionsInEmbeddedReport = (report: any): void => {
     // Keep existing handlers and only replace our own callback references.
-    report.off("commandTriggered", handleCommandTriggered);
-    report.on("commandTriggered", handleCommandTriggered);
+    // report.off("commandTriggered", handleCommandTriggered);
+    // report.on("commandTriggered", handleCommandTriggered);
 
     report.off("dataSelected", handleDataSelected);
     report.on("dataSelected", handleDataSelected);
@@ -235,7 +241,7 @@ function App() {
                     if (reportDetail.isSecureEmbedded) {
                       setTimeout(() => {
                         if (mainContentDivRef.current && reportDetail.embeddingIframe) {
-                          mainContentDivRef.current.innerHTML = reportDetail.embeddingIframe;
+                          mainContentDivRef.current.innerHTML = reportDetail.embeddingIframe.replaceAll("selectLanguage", culture);
                         }
                       }, 1000);
                       return;
@@ -318,8 +324,30 @@ function App() {
         </aside>
 
         {/* Main content area */}
-        <main className="main-content" ref={mainContentDivRef}>
-          {selectedReportRaw?.isSecureEmbedded && <div className="main-content-child" ref={mainContentDivRef}></div>}
+        <main className="main-content">
+          {selectedReportRaw?.isSecureEmbedded && (
+            <div className="main-content-child">
+              <div className="select-culture-div">
+                <label>Select Culture</label>
+                <select
+                  value={culture}
+                  onChange={(e) => {
+                    setCulture(e.target.value);
+                    setTimeout(() => {
+                      if (mainContentDivRef.current && selectedReportRaw.embeddingIframe) {
+                        mainContentDivRef.current.innerHTML = selectedReportRaw.embeddingIframe.replaceAll("selectLanguage", e.target.value);
+                      }
+                    }, 1000);
+                  }}
+                >
+                  <option value="en-US">English</option>
+                  <option value="fr-FR">French</option>
+                  <option value="es-ES">Spanish</option>
+                </select>
+              </div>
+              <div className="main-content-child-inner" ref={mainContentDivRef}></div>
+            </div>
+          )}
           {selectedReportRaw?.isSecureEmbedded == false ? (
             selectedReport && selectedWorkspace ? (
               <>
@@ -411,7 +439,6 @@ function App() {
                             ↻
                           </button>
                         </div>
-
                       </div>
                       <button className="primary-btn" onClick={() => setMode("viewer")}>
                         Report Viewer
@@ -429,39 +456,35 @@ function App() {
                   </>
                 ) : (
                   <>
-                  <PersonalizedEditableReport
-                    key={`${selectedWorkspace.id}_${selectedReport.id}`}
-                    reportRef={reportRef}
-                    reportId={selectedReport.id}
-                    embedUrl={selectedReport.embedUrl}
-                    embedReportEventHandlers={new Map()}
-                    reportSettings={settings}
-                    accessToken={accessKey}
-                    userId={user?.id || user?.userPrincipalName || user?.email || ""}
-                    workspaceId={selectedWorkspace.id}
-                    allowEdit={!selectedWorkspace.isReadOnly}
-                    onReportLoadReportAttachmentFunction={(report: any) => {
-                      addCustomFunctionsInEmbeddedReport(report);
-                      reportRef.current = report;
-                    }}
-                    onReportReady={(report, page) => {
-                      setLayoutReport((prev: any) => (prev === report ? prev : report));
-                      setLayoutPage((prev: any) =>
-                        prev?.name === page?.name ? prev : page
-                      );
-                    }}
-                    toggleButton={
-                      <button className="primary-btn" onClick={() => setMode("creator")}>
-                        Quick Visual Creator
-                      </button>
-                    }
-                    layoutControls={
-                      layoutReport && layoutPage ? (
-                        <LayoutCustomizer ref={layoutCustomizerRef} report={layoutReport} page={layoutPage} />
-                      ) : null
-                    }
-                    layoutCustomizerRef={layoutCustomizerRef}
-                  />
+                    <PersonalizedEditableReport
+                      key={`${selectedWorkspace.id}_${selectedReport.id}`}
+                      reportRef={reportRef}
+                      reportId={selectedReport.id}
+                      embedUrl={selectedReport.embedUrl}
+                      embedReportEventHandlers={new Map()}
+                      reportSettings={settings}
+                      accessToken={accessKey}
+                      userId={user?.id || user?.userPrincipalName || user?.email || ""}
+                      workspaceId={selectedWorkspace.id}
+                      allowEdit={!selectedWorkspace.isReadOnly}
+                      onReportLoadReportAttachmentFunction={(report: any) => {
+                        addCustomFunctionsInEmbeddedReport(report);
+                        reportRef.current = report;
+                      }}
+                      onReportReady={(report, page) => {
+                        setLayoutReport((prev: any) => (prev === report ? prev : report));
+                        setLayoutPage((prev: any) => (prev?.name === page?.name ? prev : page));
+                      }}
+                      toggleButton={
+                        <button className="primary-btn" onClick={() => setMode("creator")}>
+                          Quick Visual Creator
+                        </button>
+                      }
+                      layoutControls={
+                        layoutReport && layoutPage ? <LayoutCustomizer ref={layoutCustomizerRef} report={layoutReport} page={layoutPage} /> : null
+                      }
+                      layoutCustomizerRef={layoutCustomizerRef}
+                    />
                   </>
                 )}
               </>
