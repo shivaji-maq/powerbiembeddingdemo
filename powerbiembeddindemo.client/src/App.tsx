@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { models } from "powerbi-client";
 import "./App.css";
 import logo from "./assets/logo.png";
@@ -29,6 +29,89 @@ interface Report {
   datasetId?: string;
 }
 
+const GLOBAL_DATE_MIN = "1999-01-01";
+const GLOBAL_DATE_MAX = "2026-12-31";
+const GLOBAL_DATE_FILTER_STORAGE_KEY = "globalDateFilterRange";
+const DATE_INPUT_VALUE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+interface GlobalDateRange {
+  from: string;
+  to: string;
+}
+
+type GlobalDateFilterTarget = NonNullable<ReportToEmbed["globalDateFilter"]>;
+
+const normalizeDateInputValue = (value: string | undefined, fallback: string) => {
+  if (!value || !DATE_INPUT_VALUE_PATTERN.test(value)) {
+    return fallback;
+  }
+
+  if (value < GLOBAL_DATE_MIN) {
+    return GLOBAL_DATE_MIN;
+  }
+
+  if (value > GLOBAL_DATE_MAX) {
+    return GLOBAL_DATE_MAX;
+  }
+
+  return value;
+};
+
+const getInitialGlobalDateRange = (): GlobalDateRange => {
+  if (typeof window === "undefined") {
+    return { from: GLOBAL_DATE_MIN, to: GLOBAL_DATE_MAX };
+  }
+
+  try {
+    const storedRange = window.localStorage.getItem(GLOBAL_DATE_FILTER_STORAGE_KEY);
+    if (!storedRange) {
+      return { from: GLOBAL_DATE_MIN, to: GLOBAL_DATE_MAX };
+    }
+
+    const parsedRange = JSON.parse(storedRange) as Partial<GlobalDateRange>;
+    return {
+      from: normalizeDateInputValue(parsedRange.from, GLOBAL_DATE_MIN),
+      to: normalizeDateInputValue(parsedRange.to, GLOBAL_DATE_MAX),
+    };
+  } catch {
+    return { from: GLOBAL_DATE_MIN, to: GLOBAL_DATE_MAX };
+  }
+};
+
+const toStartOfDayIso = (dateValue: string) => `${dateValue}T00:00:00.000Z`;
+const toEndOfDayIso = (dateValue: string) => `${dateValue}T23:59:59.999Z`;
+
+const buildGlobalDateFilters = (target: GlobalDateFilterTarget | undefined, dateRange: GlobalDateRange): models.ReportLevelFilters[] => {
+  if (!target || !dateRange.from || !dateRange.to) {
+    return [];
+  }
+
+  const from = dateRange.from <= dateRange.to ? dateRange.from : dateRange.to;
+  const to = dateRange.from <= dateRange.to ? dateRange.to : dateRange.from;
+
+  return [
+    {
+      $schema: "http://powerbi.com/product/schema#advanced",
+      target,
+      filterType: models.FilterType.Advanced,
+      logicalOperator: "And",
+      conditions: [
+        {
+          operator: "GreaterThanOrEqual",
+          value: toStartOfDayIso(from),
+        },
+        {
+          operator: "LessThanOrEqual",
+          value: toEndOfDayIso(to),
+        },
+      ],
+      displaySettings: {
+        displayName: "Global Date",
+      },
+    },
+  ];
+};
+
 // interface SelectedData {
 //   dataPoints: Array<{
 //     identity: Array<{
@@ -51,6 +134,9 @@ function App() {
   const [selectedBookmarkId, setSelectedBookmarkId] = useState("");
   const [layoutReport, setLayoutReport] = useState<any>(null);
   const [layoutPage, setLayoutPage] = useState<any>(null);
+  const [globalDateRange, setGlobalDateRange] = useState<GlobalDateRange>(getInitialGlobalDateRange);
+  const [appliedGlobalDateRange, setAppliedGlobalDateRange] = useState<GlobalDateRange>(getInitialGlobalDateRange);
+  const [globalDateStatus, setGlobalDateStatus] = useState("");
   const bookmarks = useSelector((state: RootState) => state.bookmarks.bookmarks);
   const { isAuthenticated, user, account, error: authHookError } = useAuth();
   const {
@@ -64,6 +150,12 @@ function App() {
   const reportRef = useRef<any>(null);
   const quickVisualCreatorRef = useRef<any>(null);
   const layoutCustomizerRef = useRef<LayoutCustomizerHandle>(null);
+  const fromDateInputRef = useRef<HTMLInputElement | null>(null);
+  const toDateInputRef = useRef<HTMLInputElement | null>(null);
+
+  const globalDateFilters = useMemo<models.ReportLevelFilters[]>(() => {
+    return buildGlobalDateFilters(selectedReportRaw?.globalDateFilter, appliedGlobalDateRange);
+  }, [appliedGlobalDateRange.from, appliedGlobalDateRange.to, selectedReportRaw?.globalDateFilter]);
 
   // useEffect(() => {
   //   console.log("App mounted, isAuthenticated:", isAuthenticated);
@@ -94,6 +186,10 @@ function App() {
     };
     void fun();
   }, [dispatch, isAuthenticated, user, account, authHookError]);
+
+  useEffect(() => {
+    window.localStorage.setItem(GLOBAL_DATE_FILTER_STORAGE_KEY, JSON.stringify(appliedGlobalDateRange));
+  }, [appliedGlobalDateRange]);
 
   const settings = {
     settings: {
@@ -209,6 +305,59 @@ function App() {
   };
   const mainContentDivRef = useRef<HTMLDivElement | null>(null);
 
+  const openDatePicker = (input: HTMLInputElement | null) => {
+    if (!input) {
+      return;
+    }
+
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+      return;
+    }
+
+    input.focus();
+  };
+
+  const applyGlobalDateFilter = async () => {
+    const nextAppliedRange = {
+      from: normalizeDateInputValue(globalDateRange.from, GLOBAL_DATE_MIN),
+      to: normalizeDateInputValue(globalDateRange.to, GLOBAL_DATE_MAX),
+    };
+
+    setAppliedGlobalDateRange(nextAppliedRange);
+
+    const filters = buildGlobalDateFilters(selectedReportRaw?.globalDateFilter, nextAppliedRange);
+    if (!selectedReportRaw?.globalDateFilter || filters.length === 0) {
+      setGlobalDateStatus("Select Contoso or Competitive Marketing to apply this filter.");
+      return;
+    }
+
+    if (!reportRef.current || typeof reportRef.current.setFilters !== "function") {
+      setGlobalDateStatus("Report is still loading. Try Apply again in a moment.");
+      return;
+    }
+
+    try {
+      await reportRef.current.setFilters(filters);
+      const appliedFilters = await reportRef.current.getFilters?.();
+      console.log("Applied global date filter from Apply button", {
+        requestedFilters: filters,
+        appliedFilters,
+      });
+      setGlobalDateStatus("Date filter applied.");
+    } catch (error) {
+      console.warn("Unable to apply global date filter from Apply button", error);
+      setGlobalDateStatus("Could not apply date filter. Check console for details.");
+    }
+  };
+
+  const resetGlobalDateFilter = () => {
+    const resetRange = { from: GLOBAL_DATE_MIN, to: GLOBAL_DATE_MAX };
+    setGlobalDateRange(resetRange);
+    setAppliedGlobalDateRange(resetRange);
+    setGlobalDateStatus("");
+  };
+
   return isAuthenticated && !authError && !authHookError ? (
     <div className="app-root">
       {/* Header */}
@@ -321,6 +470,71 @@ function App() {
                   ))
               )}
             </div> */}
+          </div>
+          <div className="sidebar-section global-date-filter">
+            <h3 className="sidebar-title">Global Date Filter</h3>
+            <div className="global-date-fields">
+              <label className="global-date-field">
+                <span>From</span>
+                <div className="date-picker-row">
+                  <input
+                    ref={fromDateInputRef}
+                    className="global-date-input"
+                    type="date"
+                    min={GLOBAL_DATE_MIN}
+                    max={GLOBAL_DATE_MAX}
+                    value={globalDateRange.from}
+                    onChange={(e) => {
+                      setGlobalDateRange((currentRange) => ({
+                        ...currentRange,
+                        from: normalizeDateInputValue(e.target.value, currentRange.from),
+                      }));
+                    }}
+                  />
+                  <button type="button" className="date-picker-button" onClick={() => openDatePicker(fromDateInputRef.current)}>
+                    Pick
+                  </button>
+                </div>
+              </label>
+              <label className="global-date-field">
+                <span>To</span>
+                <div className="date-picker-row">
+                  <input
+                    ref={toDateInputRef}
+                    className="global-date-input"
+                    type="date"
+                    min={GLOBAL_DATE_MIN}
+                    max={GLOBAL_DATE_MAX}
+                    value={globalDateRange.to}
+                    onChange={(e) => {
+                      setGlobalDateRange((currentRange) => ({
+                        ...currentRange,
+                        to: normalizeDateInputValue(e.target.value, currentRange.to),
+                      }));
+                    }}
+                  />
+                  <button type="button" className="date-picker-button" onClick={() => openDatePicker(toDateInputRef.current)}>
+                    Pick
+                  </button>
+                </div>
+              </label>
+            </div>
+            <div className="global-date-actions">
+              <button type="button" className="mini-btn" onClick={() => void applyGlobalDateFilter()}>
+                Apply
+              </button>
+              <button type="button" className="mini-btn" onClick={resetGlobalDateFilter}>
+                Reset
+              </button>
+            </div>
+            {selectedReportRaw?.globalDateFilter ? (
+              <p className="global-date-filter-status">
+                Filtering {selectedReportRaw.globalDateFilter.table}.{selectedReportRaw.globalDateFilter.column}
+              </p>
+            ) : (
+              <p className="global-date-filter-status">Applies to Contoso and Competitive Marketing reports.</p>
+            )}
+            {globalDateStatus && <p className="global-date-filter-status">{globalDateStatus}</p>}
           </div>
         </aside>
 
@@ -464,6 +678,7 @@ function App() {
                       embedUrl={selectedReport.embedUrl}
                       embedReportEventHandlers={new Map()}
                       reportSettings={settings}
+                      reportFilters={globalDateFilters}
                       accessToken={accessKey}
                       userId={user?.id || user?.userPrincipalName || user?.email || ""}
                       workspaceId={selectedWorkspace.id}

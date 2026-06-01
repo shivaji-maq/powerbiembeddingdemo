@@ -141,6 +141,84 @@
   margin-bottom: 12px;
 }
 
+.global-date-filter {
+  border-top: 1px solid #e0e3e8;
+  padding-top: 16px;
+}
+
+.global-date-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.global-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.global-date-field span {
+  color: #1a237e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.date-picker-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.global-date-input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #cfd8dc;
+  border-radius: 5px;
+  background: #f7f9fc;
+  color: #1a237e;
+  font-size: 0.8rem;
+  padding: 7px 10px;
+}
+
+.global-date-input:focus {
+  border-color: #1a237e;
+  background: #fff;
+  outline: none;
+}
+
+.date-picker-button {
+  align-self: stretch;
+  border: 1px solid #1a237e;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a237e;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0 10px;
+}
+
+.date-picker-button:hover,
+.date-picker-button:focus {
+  background: #e3e7fa;
+  outline: none;
+}
+
+.global-date-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.global-date-filter-status {
+  color: #5f6b7a;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  margin: 10px 0 0;
+}
+
 .sidebar-title {
   font-size: 0.9rem;
   font-weight: 600;

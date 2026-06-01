@@ -5,6 +5,10 @@ export interface ReportToEmbed {
   name: string;
   isSecureEmbedded: boolean;
   embeddingIframe?: string;
+  globalDateFilter?: {
+    table: string;
+    column: string;
+  };
 }
 
 export const reportsToEmbed: ReportToEmbed[] = [
@@ -14,6 +18,21 @@ export const reportsToEmbed: ReportToEmbed[] = [
     datasetId: "",
     name: "Competitive Marketing Analysis",
     isSecureEmbedded: false,
+    globalDateFilter: {
+      table: "Date",
+      column: "Date",
+    },
+  },
+  {
+    reportId: "909229f0-1c69-4aa8-bbb0-b60ed2e0c3ba",
+    workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
+    datasetId: "",
+    name: "Contoso Sample Report",
+    isSecureEmbedded: false,
+    globalDateFilter: {
+      table: "vw_DimOrder",
+      column: "Order_Date",
+    },
   },
   {
     reportId: "b1189c3b-2f90-4ac1-a08c-8cccc9168bc6",

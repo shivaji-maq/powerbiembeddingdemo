@@ -8,6 +8,7 @@ export interface EmbedReportProps {
   pageId?: string;
   embedReportEventHandlers: Map<string, EventHandler>;
   reportSettings?: models.ISettings;
+  reportFilters?: models.ReportLevelFilters[];
   themeJson?: Record<string, unknown>;
   reportCssClassName?: string;
   accessToken: string;

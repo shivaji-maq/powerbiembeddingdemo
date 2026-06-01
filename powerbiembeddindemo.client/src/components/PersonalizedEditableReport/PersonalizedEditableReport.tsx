@@ -25,6 +25,7 @@ interface PersonalizedEditableReportProps {
   reportRef?: React.MutableRefObject<any>;
   embedReportEventHandlers?: Map<string, EventHandler>;
   reportSettings?: any;
+  reportFilters?: models.ReportLevelFilters[];
   onReportLoadReportAttachmentFunction?: (report: any) => void;
   toggleButton?: React.ReactNode;
   layoutControls?: React.ReactNode;
@@ -674,6 +675,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   reportRef: externalReportRef,
   embedReportEventHandlers,
   reportSettings: customReportSettings,
+  reportFilters,
   onReportLoadReportAttachmentFunction,
   toggleButton,
   layoutControls,
@@ -3290,6 +3292,43 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     // No-op for authoring embed
   }, []);
 
+  useEffect(() => {
+    if (!isReportLoaded || !reportRef.current || !reportFilters || reportFilters.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const applyReportFilters = async (delayMs: number) => {
+      if (delayMs > 0) {
+        await wait(delayMs);
+      }
+
+      if (isCancelled || !reportRef.current) {
+        return;
+      }
+
+      try {
+        await reportRef.current.setFilters(reportFilters);
+        const appliedFilters = await reportRef.current.getFilters?.();
+        console.log("Applied global report filters", {
+          requestedFilters: reportFilters,
+          appliedFilters,
+        });
+      } catch (error) {
+        console.warn("Unable to apply global report filters", error);
+      }
+    };
+
+    [0, 500, 1500].forEach((delayMs) => {
+      void applyReportFilters(delayMs);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isReportLoaded, reportFilters, reportRef]);
+
   const reportSettings: models.ISettings = {
     bars: {
       actionBar: {
@@ -3530,6 +3569,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           embedUrl={embedUrl}
           embedReportEventHandlers={mergedEmbedReportEventHandlers}
           reportSettings={reportSettings}
+          reportFilters={reportFilters}
           themeJson={activeReportThemeJson}
           accessToken={accessToken}
           tokenType={tokenType}
@@ -3545,6 +3585,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
             embedUrl={embedUrl}
             embedReportEventHandlers={authoringEmbedReportEventHandlers}
             reportSettings={reportSettings}
+            reportFilters={reportFilters}
             themeJson={activeReportThemeJson}
             reportCssClassName="authoring-report-embed"
             accessToken={accessToken}

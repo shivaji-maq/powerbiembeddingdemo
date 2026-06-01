@@ -9,6 +9,7 @@ const EmbedReport: React.FC<EmbedReportProps> = ({
   pageId,
   embedReportEventHandlers,
   reportSettings,
+  reportFilters,
   themeJson,
   reportCssClassName,
   accessToken,
@@ -26,6 +27,7 @@ const EmbedReport: React.FC<EmbedReportProps> = ({
   };
 
   if (pageId) embedConfig.pageName = pageId;
+  if (reportFilters && reportFilters.length > 0) embedConfig.filters = reportFilters;
   if (reportSettings) embedConfig.settings = reportSettings;
   if (themeJson) embedConfig.theme = { themeJson };
   return (
