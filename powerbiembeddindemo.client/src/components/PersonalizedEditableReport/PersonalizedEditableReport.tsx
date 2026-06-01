@@ -3285,10 +3285,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       },
       filters: {
         expanded: false,
-        visible: false,
+        visible: true,
       },
       pageNavigation: {
-        visible: false,
+        visible: true,
       },
       fields: {
         expanded: false,
@@ -3299,7 +3299,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         visible: false,
       },
     },
-    navContentPaneEnabled: false,
+    navContentPaneEnabled: true,
     bookmarksPaneEnabled: false,
     personalBookmarksEnabled: false,
     persistentFiltersEnabled: true,
