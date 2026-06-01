@@ -260,10 +260,11 @@
   height: 100% !important;
 }
 .empty-state {
-  color: #b0b4c0;
+  color: #3b3c41;
   font-size: 1.2rem;
   text-align: center;
-  margin-top: 80px;
+  font-weight: 600;
+  margin-top: 40vh;
 }
 
 .select-culture-div {

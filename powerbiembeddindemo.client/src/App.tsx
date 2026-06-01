@@ -215,7 +215,7 @@ function App() {
       <header className="app-header">
         <div className="header-left">
           <img src={logo} alt="Logo" className="app-logo" />
-          <span className="app-title">Power BI Report Embedder</span>
+          <span className="app-title">Power BI Report Embedding Portal</span>
         </div>
 
         <div>
@@ -493,6 +493,7 @@ function App() {
               <div className="empty-state">Select a report to embed</div>
             )
           ) : null}
+          {!selectedReportRaw && <div className="empty-state">Select a report to embed</div>}
         </main>
       </div>
     </div>

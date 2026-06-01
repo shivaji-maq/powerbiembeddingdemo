@@ -30,12 +30,21 @@ export const reportsToEmbed: ReportToEmbed[] = [
     isSecureEmbedded: true,
     embeddingIframe: `<iframe title="Translytical flow for writeback" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=f2496a3d-b253-4ab8-94d4-2f69816551cd&autoAuth=true&ctid=e4d98dd2-9199-42e5-ba8b-da3e763ede2e&language=selectLanguage" frameborder="0" allowFullScreen="true"></iframe>`,
   },
+  // {
+  //   reportId: "a4a308db-00fc-482a-9d48-27b787755580",
+  //   workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
+  //   datasetId: "",
+  //   name: "User Context Aware Store Sales",
+  //   isSecureEmbedded: true,
+  //   embeddingIframe: `<iframe title="User Context Aware Column Demo" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=4031228f-f9dc-4aa9-8905-f70414f59698&autoAuth=true&ctid=e4d98dd2-9199-42e5-ba8b-da3e763ede2e&language=selectLanguage" frameborder="0" allowFullScreen="true"></iframe>`,
+  // },
+
   {
     reportId: "a4a308db-00fc-482a-9d48-27b787755580",
     workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
     datasetId: "",
     name: "User Context Aware Store Sales",
-    isSecureEmbedded: true,
+    isSecureEmbedded: false,
     embeddingIframe: `<iframe title="User Context Aware Column Demo" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=4031228f-f9dc-4aa9-8905-f70414f59698&autoAuth=true&ctid=e4d98dd2-9199-42e5-ba8b-da3e763ede2e&language=selectLanguage" frameborder="0" allowFullScreen="true"></iframe>`,
   },
 ];
