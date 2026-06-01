@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { models } from "powerbi-client";
 import type { EventHandler } from "powerbi-client-react";
 import EmbedReport from "../EmbeddedReport/EmbeddedReport";
 import { ReportEditor } from "../ReportEditor/ReportEditor";
 import { usePersonalization } from "../../hooks/usePersonalization";
-import { applyPersonalizedFilters, getReportPersonalizationState} from "../../lib/powerbiLib/personalization";
+import { applyPersonalizedFilters, getReportPersonalizationState } from "../../lib/powerbiLib/personalization";
 // @ts-ignore -- CSS side-effect imports are handled by Vite at runtime.
 import "./PersonalizedEditableReport.css";
 
@@ -43,15 +44,7 @@ const REPORT_BOOKMARK_PREFIX = "report:";
 const ORIGINAL_REPORT_SELECTION_ID = "original:view";
 
 type QuickVisualMode = "create" | "change";
-type QuickVisualProperty =
-  | "title"
-  | "xAxis"
-  | "yAxis"
-  | "legend"
-  | "titleText"
-  | "titleAlign"
-  | "titleSize"
-  | "titleColor";
+type QuickVisualProperty = "title" | "xAxis" | "yAxis" | "legend" | "titleText" | "titleAlign" | "titleSize" | "titleColor";
 
 interface QuickVisualOption {
   name: string;
@@ -151,15 +144,10 @@ const QUICK_VISUAL_OPTIONS: QuickVisualOption[] = [
   },
 ];
 
-const QUICK_VISUAL_DEFAULT_ROLE_NAMES = Array.from(
-  new Set(QUICK_VISUAL_OPTIONS.flatMap((option) => option.dataRoleNames))
-);
+const QUICK_VISUAL_DEFAULT_ROLE_NAMES = Array.from(new Set(QUICK_VISUAL_OPTIONS.flatMap((option) => option.dataRoleNames)));
 
 const getQuickVisualOption = (visualType: string): QuickVisualOption => {
-  return (
-    QUICK_VISUAL_OPTIONS.find((option) => option.name === visualType) ||
-    QUICK_VISUAL_OPTIONS[0]
-  );
+  return QUICK_VISUAL_OPTIONS.find((option) => option.name === visualType) || QUICK_VISUAL_OPTIONS[0];
 };
 
 const toQuickVisualPropertySelector = (propertyName: QuickVisualProperty) => {
@@ -198,11 +186,7 @@ const getQuickVisualFieldKey = (field: any) => {
     return `${field.table}|measure|${field.measure}`;
   }
 
-  if (
-    typeof field.table === "string" &&
-    typeof field.hierarchy === "string" &&
-    typeof field.hierarchyLevel === "string"
-  ) {
+  if (typeof field.table === "string" && typeof field.hierarchy === "string" && typeof field.hierarchyLevel === "string") {
     return `${field.table}|hierarchy|${field.hierarchy}|${field.hierarchyLevel}`;
   }
 
@@ -245,9 +229,7 @@ const getQuickVisualFieldLabel = (field: any) => {
   return "Field";
 };
 
-const parseQueryNameToFieldTarget = (
-  queryName: string
-): { table: string; column: string } | null => {
+const parseQueryNameToFieldTarget = (queryName: string): { table: string; column: string } | null => {
   const trimmed = String(queryName || "").trim();
   if (!trimmed) {
     return null;
@@ -277,7 +259,7 @@ const parseQueryNameToFieldTarget = (
 };
 
 const normalizeQuickVisualFieldTarget = (
-  field: any
+  field: any,
 ): {
   table: string;
   column?: string;
@@ -296,10 +278,7 @@ const normalizeQuickVisualFieldTarget = (
     }
   }
 
-  const fromQueryName =
-    typeof field.queryName === "string"
-      ? parseQueryNameToFieldTarget(field.queryName)
-      : null;
+  const fromQueryName = typeof field.queryName === "string" ? parseQueryNameToFieldTarget(field.queryName) : null;
 
   const entityName =
     field?.entity ||
@@ -314,13 +293,7 @@ const normalizeQuickVisualFieldTarget = (
     field?.Column?.Expression?.SourceRef?.Entity ||
     field?.Measure?.Expression?.SourceRef?.Entity;
 
-  const propertyName =
-    field?.property ||
-    field?.Property ||
-    field?.Column?.Property ||
-    field?.Measure?.Property ||
-    field?.name ||
-    field?.displayName;
+  const propertyName = field?.property || field?.Property || field?.Column?.Property || field?.Measure?.Property || field?.name || field?.displayName;
 
   if (typeof entityName === "string" && typeof propertyName === "string") {
     return {
@@ -364,10 +337,7 @@ const normalizeQuickVisualFieldTarget = (
     };
   }
 
-  if (
-    typeof field.hierarchy === "string" &&
-    typeof field.hierarchyLevel === "string"
-  ) {
+  if (typeof field.hierarchy === "string" && typeof field.hierarchyLevel === "string") {
     return {
       table: field.table,
       hierarchy: field.hierarchy,
@@ -382,12 +352,7 @@ const normalizeQuickVisualFieldTarget = (
   return null;
 };
 
-const collectQuickVisualFieldTargets = (
-  value: any,
-  onTarget: (target: any) => void,
-  depth = 0,
-  visited: WeakSet<object> = new WeakSet<object>()
-) => {
+const collectQuickVisualFieldTargets = (value: any, onTarget: (target: any) => void, depth = 0, visited: WeakSet<object> = new WeakSet<object>()) => {
   if (value == null || depth > 8) {
     return;
   }
@@ -418,10 +383,7 @@ const collectQuickVisualFieldTargets = (
   });
 };
 
-const addQuickVisualFieldOption = (
-  optionByKey: Map<string, QuickVisualFieldOption>,
-  rawField: any
-) => {
+const addQuickVisualFieldOption = (optionByKey: Map<string, QuickVisualFieldOption>, rawField: any) => {
   const normalizedField = normalizeQuickVisualFieldTarget(rawField);
   if (!normalizedField) {
     return;
@@ -434,9 +396,7 @@ const addQuickVisualFieldOption = (
 
   optionByKey.set(key, {
     key,
-    label:
-      getQuickVisualFieldLabel(normalizedField) ||
-      getQuickVisualFieldLabel(rawField),
+    label: getQuickVisualFieldLabel(normalizedField) || getQuickVisualFieldLabel(rawField),
     target: normalizedField,
   });
 };
@@ -449,24 +409,17 @@ const createBookmarkId = () => {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 };
 
-const toSavedBookmarkSelectionId = (bookmarkId: string) =>
-  `${SAVED_BOOKMARK_PREFIX}${bookmarkId}`;
+const toSavedBookmarkSelectionId = (bookmarkId: string) => `${SAVED_BOOKMARK_PREFIX}${bookmarkId}`;
 
-const toReportBookmarkSelectionId = (bookmarkName: string) =>
-  `${REPORT_BOOKMARK_PREFIX}${bookmarkName}`;
+const toReportBookmarkSelectionId = (bookmarkName: string) => `${REPORT_BOOKMARK_PREFIX}${bookmarkName}`;
 
 const getSavedBookmarkIdFromSelection = (selectionId: string) =>
-  selectionId.startsWith(SAVED_BOOKMARK_PREFIX)
-    ? selectionId.slice(SAVED_BOOKMARK_PREFIX.length)
-    : "";
+  selectionId.startsWith(SAVED_BOOKMARK_PREFIX) ? selectionId.slice(SAVED_BOOKMARK_PREFIX.length) : "";
 
 const getReportBookmarkNameFromSelection = (selectionId: string) =>
-  selectionId.startsWith(REPORT_BOOKMARK_PREFIX)
-    ? selectionId.slice(REPORT_BOOKMARK_PREFIX.length)
-    : "";
+  selectionId.startsWith(REPORT_BOOKMARK_PREFIX) ? selectionId.slice(REPORT_BOOKMARK_PREFIX.length) : "";
 
-const isOriginalReportSelection = (selectionId: string) =>
-  selectionId === ORIGINAL_REPORT_SELECTION_ID;
+const isOriginalReportSelection = (selectionId: string) => selectionId === ORIGINAL_REPORT_SELECTION_ID;
 
 const parseSafeDate = (value?: string | null) => {
   if (!value) {
@@ -477,9 +430,7 @@ const parseSafeDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const flattenReportBookmarks = (
-  bookmarks: models.IReportBookmark[]
-): models.IReportBookmark[] => {
+const flattenReportBookmarks = (bookmarks: models.IReportBookmark[]): models.IReportBookmark[] => {
   const flattened: models.IReportBookmark[] = [];
   const stack = Array.isArray(bookmarks) ? [...bookmarks] : [];
 
@@ -490,9 +441,7 @@ const flattenReportBookmarks = (
     }
 
     const children = Array.isArray(bookmark.children) ? bookmark.children : [];
-    const canApplyBookmark =
-      (typeof bookmark.state === "string" && bookmark.state.length > 0) ||
-      children.length === 0;
+    const canApplyBookmark = (typeof bookmark.state === "string" && bookmark.state.length > 0) || children.length === 0;
 
     if (canApplyBookmark) {
       flattened.push({
@@ -531,9 +480,7 @@ const getBookmarkNameFromAppliedEvent = (event: any) => {
     event?.detail?.title,
   ];
 
-  const match = candidates.find(
-    (value) => typeof value === "string" && value.trim()
-  );
+  const match = candidates.find((value) => typeof value === "string" && value.trim());
 
   return typeof match === "string" ? match.trim() : "";
 };
@@ -544,17 +491,12 @@ const isLikelyOpaqueBookmarkIdentifier = (value: string) => {
     return false;
   }
 
-  const looksLikeGuid =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      trimmed
-    );
-  
+  const looksLikeGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+
   return looksLikeGuid;
 };
 
-const toReadableBookmarkName = (
-  ...candidates: Array<string | null | undefined>
-) => {
+const toReadableBookmarkName = (...candidates: Array<string | null | undefined>) => {
   for (const candidate of candidates) {
     if (typeof candidate !== "string") {
       continue;
@@ -568,9 +510,7 @@ const toReadableBookmarkName = (
     return trimmed;
   }
 
-  const opaqueCandidate = candidates.find(
-    (candidate) => typeof candidate === "string" && candidate.trim()
-  );
+  const opaqueCandidate = candidates.find((candidate) => typeof candidate === "string" && candidate.trim());
 
   if (typeof opaqueCandidate === "string") {
     const compact = opaqueCandidate.trim().replace(/-/g, "").slice(0, 6);
@@ -580,18 +520,10 @@ const toReadableBookmarkName = (
   return "Personal bookmark";
 };
 
-const toUniqueBookmarkName = (
-  preferredName: string,
-  existingBookmarks: BookmarkProfile[],
-  preserveBookmarkId?: string
-) => {
+const toUniqueBookmarkName = (preferredName: string, existingBookmarks: BookmarkProfile[], preserveBookmarkId?: string) => {
   const baseName = preferredName.trim() || "Saved view";
   const normalize = (value: string) => value.trim().toLowerCase();
-  const existingNames = new Set(
-    existingBookmarks
-      .filter((bookmark) => bookmark.id !== preserveBookmarkId)
-      .map((bookmark) => normalize(bookmark.name))
-  );
+  const existingNames = new Set(existingBookmarks.filter((bookmark) => bookmark.id !== preserveBookmarkId).map((bookmark) => normalize(bookmark.name)));
 
   if (!existingNames.has(normalize(baseName))) {
     return baseName;
@@ -610,23 +542,12 @@ const toNormalizedBookmarkProfile = (bookmark: any): BookmarkProfile | null => {
     return null;
   }
 
-  const id =
-    typeof bookmark.id === "string" && bookmark.id
-      ? bookmark.id
-      : createBookmarkId();
+  const id = typeof bookmark.id === "string" && bookmark.id ? bookmark.id : createBookmarkId();
 
-  const rawBookmarkName =
-    typeof bookmark.name === "string" ? bookmark.name.trim() : "";
-  const bookmarkName = rawBookmarkName
-    ? toReadableBookmarkName(rawBookmarkName)
-    : `Saved view ${id.slice(0, 6)}`;
+  const rawBookmarkName = typeof bookmark.name === "string" ? bookmark.name.trim() : "";
+  const bookmarkName = rawBookmarkName ? toReadableBookmarkName(rawBookmarkName) : `Saved view ${id.slice(0, 6)}`;
 
-  const bookmarkState =
-    typeof bookmark.state === "string"
-      ? bookmark.state
-      : typeof bookmark.bookmarkStateJson === "string"
-        ? bookmark.bookmarkStateJson
-        : "";
+  const bookmarkState = typeof bookmark.state === "string" ? bookmark.state : typeof bookmark.bookmarkStateJson === "string" ? bookmark.bookmarkStateJson : "";
 
   if (!bookmarkState) {
     return null;
@@ -638,14 +559,8 @@ const toNormalizedBookmarkProfile = (bookmark: any): BookmarkProfile | null => {
     name: bookmarkName,
     state: bookmarkState,
     bookmarkStateJson: bookmarkState,
-    createdAt:
-      typeof bookmark.createdAt === "string"
-        ? bookmark.createdAt
-        : new Date().toISOString(),
-    updatedAt:
-      typeof bookmark.updatedAt === "string"
-        ? bookmark.updatedAt
-        : new Date().toISOString(),
+    createdAt: typeof bookmark.createdAt === "string" ? bookmark.createdAt : new Date().toISOString(),
+    updatedAt: typeof bookmark.updatedAt === "string" ? bookmark.updatedAt : new Date().toISOString(),
   } as BookmarkProfile;
 };
 
@@ -654,9 +569,7 @@ const normalizeAndDedupeBookmarkProfiles = (bookmarks: any): BookmarkProfile[] =
     return [];
   }
 
-  const normalizedBookmarks = bookmarks
-    .map((bookmark) => toNormalizedBookmarkProfile(bookmark))
-    .filter(Boolean) as BookmarkProfile[];
+  const normalizedBookmarks = bookmarks.map((bookmark) => toNormalizedBookmarkProfile(bookmark)).filter(Boolean) as BookmarkProfile[];
 
   const sortedByRecentUpdate = [...normalizedBookmarks].sort((a, b) => {
     const left = parseSafeDate(a.updatedAt)?.getTime() ?? 0;
@@ -699,21 +612,15 @@ const normalizeAndDedupeBookmarkProfiles = (bookmarks: any): BookmarkProfile[] =
   return deduped;
 };
 
-const wait = (ms: number) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 const isReportNotReadyError = (error: unknown) => {
   const message = String((error as any)?.message || "").toLowerCase();
   const detailed = String((error as any)?.detailedMessage || "").toLowerCase();
-  return (
-    message.includes("reportisnotready") ||
-    detailed.includes("report is not ready")
-  );
+  return message.includes("reportisnotready") || detailed.includes("report is not ready");
 };
 
-export const PersonalizedEditableReport: React.FC<
-  PersonalizedEditableReportProps
-> = ({
+export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProps> = ({
   reportId,
   embedUrl,
   workspaceId,
@@ -735,11 +642,8 @@ export const PersonalizedEditableReport: React.FC<
   // FIX: Track the dedicated blank authoring page separately (showcase uses pages[1])
   const authoringPageRef = useRef<any>(null);
   const reportRef = externalReportRef || internalReportRef;
-  const customReportSettingsObject =
-    (customReportSettings || {}) as Record<string, any>;
-  const customQuickVisualFieldCatalog = Array.isArray(
-    customReportSettingsObject.quickVisualFieldCatalog
-  )
+  const customReportSettingsObject = (customReportSettings || {}) as Record<string, any>;
+  const customQuickVisualFieldCatalog = Array.isArray(customReportSettingsObject.quickVisualFieldCatalog)
     ? customReportSettingsObject.quickVisualFieldCatalog
     : [];
   const embedReportSettingsOverrides = { ...customReportSettingsObject };
@@ -748,54 +652,34 @@ export const PersonalizedEditableReport: React.FC<
   const [_currentPage, setCurrentPage] = useState<string>("");
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isReportLoaded, setIsReportLoaded] = useState(false);
   const [isAuthoringReportLoaded, setIsAuthoringReportLoaded] = useState(false);
-  const [authoringEmbedError, setAuthoringEmbedError] = useState<string | null>(
-    null
-  );
+  const [authoringEmbedError, setAuthoringEmbedError] = useState<string | null>(null);
   const [autoSaveRevision, setAutoSaveRevision] = useState(0);
-  const [bookmarkProfiles, setBookmarkProfiles] = useState<BookmarkProfile[]>(
-    []
-  );
-  const [reportBookmarks, setReportBookmarks] = useState<
-    models.IReportBookmark[]
-  >([]);
+  const [bookmarkProfiles, setBookmarkProfiles] = useState<BookmarkProfile[]>([]);
+  const [reportBookmarks, setReportBookmarks] = useState<models.IReportBookmark[]>([]);
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<string>("");
   const [bookmarkStatus, setBookmarkStatus] = useState<string | null>(null);
   const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
   const [bookmarkNameInput, setBookmarkNameInput] = useState("");
   const [isSavingBookmark, setIsSavingBookmark] = useState(false);
   const [isQuickVisualModalOpen, setIsQuickVisualModalOpen] = useState(false);
-  const [quickVisualMode, setQuickVisualMode] =
-    useState<QuickVisualMode>("create");
+  const [quickVisualMode, setQuickVisualMode] = useState<QuickVisualMode>("create");
   const [quickVisualType, setQuickVisualType] = useState("columnChart");
-  const [quickVisualTargetVisualName, setQuickVisualTargetVisualName] =
-    useState("");
-  const [quickVisualFieldOptions, setQuickVisualFieldOptions] = useState<
-    QuickVisualFieldOption[]
-  >([]);
-  const [quickVisualRoleSelections, setQuickVisualRoleSelections] =
-    useState<QuickVisualRoleSelections>({});
+  const [quickVisualTargetVisualName, setQuickVisualTargetVisualName] = useState("");
+  const [quickVisualFieldOptions, setQuickVisualFieldOptions] = useState<QuickVisualFieldOption[]>([]);
+  const [quickVisualRoleSelections, setQuickVisualRoleSelections] = useState<QuickVisualRoleSelections>({});
   const [quickVisualTitle, setQuickVisualTitle] = useState("");
-  const [quickVisualTitleAlign, setQuickVisualTitleAlign] = useState(
-    "left"
-  );
+  const [quickVisualTitleAlign, setQuickVisualTitleAlign] = useState("left");
   const [quickVisualShowTitle, setQuickVisualShowTitle] = useState(true);
   const [quickVisualShowLegend, setQuickVisualShowLegend] = useState(true);
   const [quickVisualShowXAxis, setQuickVisualShowXAxis] = useState(true);
   const [quickVisualShowYAxis, setQuickVisualShowYAxis] = useState(true);
   const [isQuickVisualApplying, setIsQuickVisualApplying] = useState(false);
-  const [quickVisualTargets, setQuickVisualTargets] = useState<
-    QuickVisualTarget[]
-  >([]);
-  const [quickVisualStatus, setQuickVisualStatus] = useState<string | null>(
-    null
-  );
-  const [isHydratingPersonalization, setIsHydratingPersonalization] =
-    useState(true);
+  const [quickVisualTargets, setQuickVisualTargets] = useState<QuickVisualTarget[]>([]);
+  const [quickVisualStatus, setQuickVisualStatus] = useState<string | null>(null);
+  const [isHydratingPersonalization, setIsHydratingPersonalization] = useState(true);
   const autoSaveInFlightRef = useRef(false);
   const suppressAutoSaveEventsRef = useRef(0);
   const hasHydratedRef = useRef(false);
@@ -806,20 +690,15 @@ export const PersonalizedEditableReport: React.FC<
   const authoringPreviewVisualRef = useRef<any>(null);
   const bookmarksStorageKey = `pbi_bookmarks_${userId}_${reportId}`;
   const selectedBookmarkStorageKey = `${bookmarksStorageKey}_selected`;
-  const quickVisualFieldCatalogStorageKey =
-    `pbi_quick_visual_fields_${reportId}`;
-  const quickVisualSessionStorageKey =
-    `pbi_quick_visual_session_${userId}_${reportId}`;
-  const originalReportStateStorageKey =
-    `pbi_original_state_${userId}_${reportId}`;
+  const quickVisualFieldCatalogStorageKey = `pbi_quick_visual_fields_${reportId}`;
+  const quickVisualSessionStorageKey = `pbi_quick_visual_session_${userId}_${reportId}`;
+  const originalReportStateStorageKey = `pbi_original_state_${userId}_${reportId}`;
 
-  const { savePersonalization, getPersonalization, loading } =
-    usePersonalization();
+  const { savePersonalization, getPersonalization, loading } = usePersonalization();
   const isReportLoadedRef = useRef(isReportLoaded);
   const autoSaveEnabledRef = useRef(autoSaveEnabled);
   const isHydratingPersonalizationRef = useRef(isHydratingPersonalization);
-  const getCurrentPersonalizationPayloadRef =
-    useRef<() => Promise<any>>(async () => null);
+  const getCurrentPersonalizationPayloadRef = useRef<() => Promise<any>>(async () => null);
   const savePersonalizationRef = useRef(savePersonalization);
   const bookmarkProfilesRef = useRef<BookmarkProfile[]>(bookmarkProfiles);
   const hasReplayedSessionQuickVisualsRef = useRef(false);
@@ -874,21 +753,11 @@ export const PersonalizedEditableReport: React.FC<
   }, []);
 
   const toAuthoringEmbedErrorMessage = useCallback((event?: any) => {
-    const candidateMessages = [
-      event?.detail?.message,
-      event?.detail?.detailedMessage,
-      event?.detail?.error?.message,
-      event?.message,
-    ];
+    const candidateMessages = [event?.detail?.message, event?.detail?.detailedMessage, event?.detail?.error?.message, event?.message];
 
-    const rawMessage = candidateMessages.find(
-      (candidate) => typeof candidate === "string" && candidate.trim()
-    );
+    const rawMessage = candidateMessages.find((candidate) => typeof candidate === "string" && candidate.trim());
 
-    const message =
-      typeof rawMessage === "string"
-        ? rawMessage.trim()
-        : "Authoring report failed to initialize.";
+    const message = typeof rawMessage === "string" ? rawMessage.trim() : "Authoring report failed to initialize.";
 
     const normalizedMessage = message.toLowerCase();
     if (
@@ -910,8 +779,7 @@ export const PersonalizedEditableReport: React.FC<
     }
 
     try {
-      const storedState =
-        window.sessionStorage.getItem(originalReportStateStorageKey) || "";
+      const storedState = window.sessionStorage.getItem(originalReportStateStorageKey) || "";
       if (storedState) {
         originalReportStateRef.current = storedState;
       }
@@ -927,10 +795,7 @@ export const PersonalizedEditableReport: React.FC<
       return true;
     }
 
-    if (
-      !reportRef.current ||
-      typeof reportRef.current?.bookmarksManager?.capture !== "function"
-    ) {
+    if (!reportRef.current || typeof reportRef.current?.bookmarksManager?.capture !== "function") {
       return false;
     }
 
@@ -945,11 +810,8 @@ export const PersonalizedEditableReport: React.FC<
 
       originalReportStateRef.current = bookmarkState;
       try {
-        window.sessionStorage.setItem(
-          originalReportStateStorageKey,
-          bookmarkState
-        );
-      } catch { }
+        window.sessionStorage.setItem(originalReportStateStorageKey, bookmarkState);
+      } catch {}
 
       return true;
     } catch (error) {
@@ -966,14 +828,8 @@ export const PersonalizedEditableReport: React.FC<
     const originalState = getOriginalReportState();
 
     try {
-      if (
-        originalState &&
-        typeof reportRef.current?.bookmarksManager?.applyState === "function"
-      ) {
-        suppressAutoSaveEventsRef.current = Math.max(
-          suppressAutoSaveEventsRef.current,
-          2
-        );
+      if (originalState && typeof reportRef.current?.bookmarksManager?.applyState === "function") {
+        suppressAutoSaveEventsRef.current = Math.max(suppressAutoSaveEventsRef.current, 2);
         await reportRef.current.bookmarksManager.applyState(originalState);
       } else if (typeof reportRef.current.reload === "function") {
         await reportRef.current.reload();
@@ -990,8 +846,7 @@ export const PersonalizedEditableReport: React.FC<
         reportRef.current &&
         authoringReportRef.current &&
         typeof reportRef.current?.bookmarksManager?.capture === "function" &&
-        typeof authoringReportRef.current?.bookmarksManager?.applyState ===
-          "function"
+        typeof authoringReportRef.current?.bookmarksManager?.applyState === "function"
       ) {
         try {
           const captured = await reportRef.current.bookmarksManager.capture({
@@ -999,15 +854,10 @@ export const PersonalizedEditableReport: React.FC<
           });
           const bookmarkState = captured?.state || "";
           if (bookmarkState) {
-            await authoringReportRef.current.bookmarksManager.applyState(
-              bookmarkState
-            );
+            await authoringReportRef.current.bookmarksManager.applyState(bookmarkState);
           }
         } catch (syncError) {
-          console.warn(
-            "Unable to sync visible report state into authoring report",
-            syncError
-          );
+          console.warn("Unable to sync visible report state into authoring report", syncError);
         }
       }
 
@@ -1023,11 +873,7 @@ export const PersonalizedEditableReport: React.FC<
       return false;
     }
 
-    if (
-      typeof reportRef.current?.bookmarksManager?.capture !== "function" ||
-      typeof authoringReportRef.current?.bookmarksManager?.applyState !==
-        "function"
-    ) {
+    if (typeof reportRef.current?.bookmarksManager?.capture !== "function" || typeof authoringReportRef.current?.bookmarksManager?.applyState !== "function") {
       return false;
     }
 
@@ -1054,10 +900,7 @@ export const PersonalizedEditableReport: React.FC<
       return false;
     }
 
-    if (
-      typeof authoringReportRef.current?.bookmarksManager?.capture !== "function" ||
-      typeof reportRef.current?.bookmarksManager?.applyState !== "function"
-    ) {
+    if (typeof authoringReportRef.current?.bookmarksManager?.capture !== "function" || typeof reportRef.current?.bookmarksManager?.applyState !== "function") {
       return false;
     }
 
@@ -1071,10 +914,7 @@ export const PersonalizedEditableReport: React.FC<
         return false;
       }
 
-      suppressAutoSaveEventsRef.current = Math.max(
-        suppressAutoSaveEventsRef.current,
-        2
-      );
+      suppressAutoSaveEventsRef.current = Math.max(suppressAutoSaveEventsRef.current, 2);
       await reportRef.current.bookmarksManager.applyState(bookmarkState);
 
       const activePage = await reportRef.current?.getActivePage?.();
@@ -1138,88 +978,48 @@ export const PersonalizedEditableReport: React.FC<
   }, []);
 
   useEffect(() => {
-    if (
-      !isReportLoaded ||
-      !isAuthoringReportLoaded ||
-      isHydratingPersonalization
-    ) {
+    if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization) {
       return;
     }
 
     void syncVisibleStateToAuthoring();
-  }, [
-    isAuthoringReportLoaded,
-    isHydratingPersonalization,
-    isReportLoaded,
-    syncVisibleStateToAuthoring,
-  ]);
+  }, [isAuthoringReportLoaded, isHydratingPersonalization, isReportLoaded, syncVisibleStateToAuthoring]);
 
   const persistBookmarks = useCallback(
     (nextBookmarks: BookmarkProfile[]) => {
-      const finalBookmarksToSave = normalizeAndDedupeBookmarkProfiles(
-        nextBookmarks
-      );
+      const finalBookmarksToSave = normalizeAndDedupeBookmarkProfiles(nextBookmarks);
 
       setBookmarkProfiles(finalBookmarksToSave);
       bookmarkProfilesRef.current = finalBookmarksToSave;
-      window.localStorage.setItem(
-        bookmarksStorageKey,
-        JSON.stringify(finalBookmarksToSave)
-      );
+      window.localStorage.setItem(bookmarksStorageKey, JSON.stringify(finalBookmarksToSave));
     },
-    [bookmarksStorageKey]
+    [bookmarksStorageKey],
   );
 
   const upsertCapturedBookmark = useCallback(
-    (
-      bookmarkName: string,
-      bookmarkStateJson: string,
-      selectAfterUpsert = false,
-      mode: CapturedBookmarkUpsertMode = "syncApplied",
-      layoutState?: any
-    ) => {
+    (bookmarkName: string, bookmarkStateJson: string, selectAfterUpsert = false, mode: CapturedBookmarkUpsertMode = "syncApplied", layoutState?: any) => {
       if (!bookmarkStateJson) {
         return null;
       }
 
       const existingBookmarks = bookmarkProfilesRef.current;
 
-      const normalizedInputName =
-        typeof bookmarkName === "string" ? bookmarkName.trim() : "";
-      const canMatchByName =
-        !!normalizedInputName &&
-        !isLikelyOpaqueBookmarkIdentifier(normalizedInputName);
+      const normalizedInputName = typeof bookmarkName === "string" ? bookmarkName.trim() : "";
+      const canMatchByName = !!normalizedInputName && !isLikelyOpaqueBookmarkIdentifier(normalizedInputName);
 
       const existingBookmarkByState = existingBookmarks.find(
-        (bookmark) =>
-          bookmark.state === bookmarkStateJson ||
-          bookmark.bookmarkStateJson === bookmarkStateJson
+        (bookmark) => bookmark.state === bookmarkStateJson || bookmark.bookmarkStateJson === bookmarkStateJson,
       );
 
       const existingBookmarkByName = canMatchByName
-        ? existingBookmarks.find(
-            (bookmark) =>
-              bookmark.name.toLowerCase() === normalizedInputName.toLowerCase()
-          )
+        ? existingBookmarks.find((bookmark) => bookmark.name.toLowerCase() === normalizedInputName.toLowerCase())
         : null;
 
-      const existingBookmark =
-        mode === "syncApplied"
-          ? existingBookmarkByState || existingBookmarkByName
-          : null;
+      const existingBookmark = mode === "syncApplied" ? existingBookmarkByState || existingBookmarkByName : null;
 
-      const preferredName = toReadableBookmarkName(
-        normalizedInputName,
-        existingBookmark?.name,
-        existingBookmarkByState?.name,
-        existingBookmarkByName?.name
-      );
+      const preferredName = toReadableBookmarkName(normalizedInputName, existingBookmark?.name, existingBookmarkByState?.name, existingBookmarkByName?.name);
 
-      const normalizedName = toUniqueBookmarkName(
-        preferredName,
-        existingBookmarks,
-        existingBookmark?.id
-      );
+      const normalizedName = toUniqueBookmarkName(preferredName, existingBookmarks, existingBookmark?.id);
 
       const now = new Date().toISOString();
 
@@ -1233,10 +1033,7 @@ export const PersonalizedEditableReport: React.FC<
         layoutState: layoutState ?? existingBookmark?.layoutState,
       };
 
-      const nextBookmarks = [
-        nextBookmark,
-        ...existingBookmarks.filter((bookmark) => bookmark.id !== nextBookmark.id),
-      ];
+      const nextBookmarks = [nextBookmark, ...existingBookmarks.filter((bookmark) => bookmark.id !== nextBookmark.id)];
 
       persistBookmarks(nextBookmarks);
 
@@ -1248,11 +1045,7 @@ export const PersonalizedEditableReport: React.FC<
 
       return nextBookmark;
     },
-    [
-      persistBookmarks,
-      selectedBookmarkStorageKey,
-      setSelectedBookmarkId,
-    ]
+    [persistBookmarks, selectedBookmarkStorageKey, setSelectedBookmarkId],
   );
 
   const applyBookmarkProfile = useCallback(
@@ -1267,13 +1060,8 @@ export const PersonalizedEditableReport: React.FC<
         let appliedBookmarkState = false;
         const bookmarkState = bookmark.state || bookmark.bookmarkStateJson;
 
-        if (
-          bookmarkState &&
-          reportRef.current?.bookmarksManager?.applyState
-        ) {
-          await reportRef.current.bookmarksManager.applyState(
-            bookmarkState
-          );
+        if (bookmarkState && reportRef.current?.bookmarksManager?.applyState) {
+          await reportRef.current.bookmarksManager.applyState(bookmarkState);
           appliedBookmarkState = true;
         }
 
@@ -1305,38 +1093,31 @@ export const PersonalizedEditableReport: React.FC<
         console.error("Error applying bookmark profile:", error);
       }
     },
-    [reportRef]
+    [reportRef],
   );
 
-  const runWhenReportReady = useCallback(
-    async <T,>(action: () => Promise<T>, retries = 5): Promise<T> => {
-      let lastError: unknown;
+  const runWhenReportReady = useCallback(async <T,>(action: () => Promise<T>, retries = 5): Promise<T> => {
+    let lastError: unknown;
 
-      for (let attempt = 0; attempt <= retries; attempt += 1) {
-        try {
-          return await action();
-        } catch (error) {
-          lastError = error;
-          if (!isReportNotReadyError(error) || attempt === retries) {
-            throw error;
-          }
-
-          await wait(350 * (attempt + 1));
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        return await action();
+      } catch (error) {
+        lastError = error;
+        if (!isReportNotReadyError(error) || attempt === retries) {
+          throw error;
         }
-      }
 
-      throw lastError;
-    },
-    []
-  );
+        await wait(350 * (attempt + 1));
+      }
+    }
+
+    throw lastError;
+  }, []);
 
   const loadReportBookmarks = useCallback(
     async (retryForNonEmpty = false): Promise<models.IReportBookmark[]> => {
-      if (
-        !isReportLoaded ||
-        !reportRef.current ||
-        typeof reportRef.current?.bookmarksManager?.getBookmarks !== "function"
-      ) {
+      if (!isReportLoaded || !reportRef.current || typeof reportRef.current?.bookmarksManager?.getBookmarks !== "function") {
         setReportBookmarks([]);
         return [];
       }
@@ -1349,9 +1130,7 @@ export const PersonalizedEditableReport: React.FC<
           const bookmarks = await runWhenReportReady(async () => {
             return await reportRef.current.bookmarksManager.getBookmarks();
           });
-          flattenedBookmarks = flattenReportBookmarks(
-            Array.isArray(bookmarks) ? bookmarks : []
-          );
+          flattenedBookmarks = flattenReportBookmarks(Array.isArray(bookmarks) ? bookmarks : []);
           if (flattenedBookmarks.length > 0 || attempt === maxAttempts - 1) {
             setReportBookmarks(flattenedBookmarks);
             return flattenedBookmarks;
@@ -1368,54 +1147,37 @@ export const PersonalizedEditableReport: React.FC<
         return [];
       }
     },
-    [isReportLoaded, reportRef, runWhenReportReady]
+    [isReportLoaded, reportRef, runWhenReportReady],
   );
 
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(bookmarksStorageKey);
-      const parsedBookmarks = stored
-        ? (JSON.parse(stored) as BookmarkProfile[])
-        : [];
+      const parsedBookmarks = stored ? (JSON.parse(stored) as BookmarkProfile[]) : [];
 
-      const normalizedBookmarks = normalizeAndDedupeBookmarkProfiles(
-        parsedBookmarks
-      );
+      const normalizedBookmarks = normalizeAndDedupeBookmarkProfiles(parsedBookmarks);
 
       if (stored) {
-        window.localStorage.setItem(
-          bookmarksStorageKey,
-          JSON.stringify(normalizedBookmarks)
-        );
+        window.localStorage.setItem(bookmarksStorageKey, JSON.stringify(normalizedBookmarks));
       }
 
       setBookmarkProfiles(normalizedBookmarks);
       bookmarkProfilesRef.current = normalizedBookmarks;
 
-      const storedSelectedBookmarkRaw =
-        window.localStorage.getItem(selectedBookmarkStorageKey) || "";
+      const storedSelectedBookmarkRaw = window.localStorage.getItem(selectedBookmarkStorageKey) || "";
 
       const storedSelectedBookmark =
         !storedSelectedBookmarkRaw.startsWith(SAVED_BOOKMARK_PREFIX) &&
         !storedSelectedBookmarkRaw.startsWith(REPORT_BOOKMARK_PREFIX) &&
-        normalizedBookmarks.some(
-          (bookmark) => bookmark.id === storedSelectedBookmarkRaw
-        )
+        normalizedBookmarks.some((bookmark) => bookmark.id === storedSelectedBookmarkRaw)
           ? toSavedBookmarkSelectionId(storedSelectedBookmarkRaw)
           : storedSelectedBookmarkRaw;
 
-      const savedBookmarkId = getSavedBookmarkIdFromSelection(
-        storedSelectedBookmark
-      );
-      const hasSelectedSavedBookmark = !!savedBookmarkId
-        ? normalizedBookmarks.some((bookmark) => bookmark.id === savedBookmarkId)
-        : false;
+      const savedBookmarkId = getSavedBookmarkIdFromSelection(storedSelectedBookmark);
+      const hasSelectedSavedBookmark = !!savedBookmarkId ? normalizedBookmarks.some((bookmark) => bookmark.id === savedBookmarkId) : false;
 
-      const isReportBookmarkSelection =
-        !!getReportBookmarkNameFromSelection(storedSelectedBookmark);
-      const isOriginalSelection = isOriginalReportSelection(
-        storedSelectedBookmark
-      );
+      const isReportBookmarkSelection = !!getReportBookmarkNameFromSelection(storedSelectedBookmark);
+      const isOriginalSelection = isOriginalReportSelection(storedSelectedBookmark);
 
       if (hasSelectedSavedBookmark || isReportBookmarkSelection || isOriginalSelection) {
         setSelectedBookmarkId(storedSelectedBookmark);
@@ -1472,22 +1234,14 @@ export const PersonalizedEditableReport: React.FC<
 
           let appliedSavedState = false;
 
-          if (
-            saved.settingsJson &&
-            reportRef.current?.bookmarksManager?.applyState
-          ) {
+          if (saved.settingsJson && reportRef.current?.bookmarksManager?.applyState) {
             try {
               const parsedSettings = JSON.parse(saved.settingsJson);
-              const bookmarkStateFromSettings =
-                typeof parsedSettings === "string"
-                  ? parsedSettings
-                  : parsedSettings?.bookmarkState;
+              const bookmarkStateFromSettings = typeof parsedSettings === "string" ? parsedSettings : parsedSettings?.bookmarkState;
 
               if (bookmarkStateFromSettings) {
                 await runWhenReportReady(async () => {
-                  await reportRef.current.bookmarksManager.applyState(
-                    bookmarkStateFromSettings
-                  );
+                  await reportRef.current.bookmarksManager.applyState(bookmarkStateFromSettings);
                   return true;
                 });
                 appliedSavedState = true;
@@ -1505,11 +1259,7 @@ export const PersonalizedEditableReport: React.FC<
             });
           }
 
-          if (
-            !appliedSavedState &&
-            saved.activePage &&
-            reportRef.current.getPages
-          ) {
+          if (!appliedSavedState && saved.activePage && reportRef.current.getPages) {
             const pages = await runWhenReportReady(async () => {
               return await reportRef.current.getPages();
             });
@@ -1538,10 +1288,7 @@ export const PersonalizedEditableReport: React.FC<
         const parsedBookmarks = rawBookmarks ? JSON.parse(rawBookmarks) : [];
         localBookmarks = normalizeAndDedupeBookmarkProfiles(parsedBookmarks);
 
-        window.localStorage.setItem(
-          bookmarksStorageKey,
-          JSON.stringify(localBookmarks)
-        );
+        window.localStorage.setItem(bookmarksStorageKey, JSON.stringify(localBookmarks));
       } catch {
         localBookmarks = [];
       }
@@ -1552,32 +1299,20 @@ export const PersonalizedEditableReport: React.FC<
       setBookmarkProfiles(localBookmarks);
       setReportBookmarks(reportDefinedBookmarks);
 
-      const preferredBookmarkIdRaw = window.localStorage.getItem(
-        selectedBookmarkStorageKey
-      ) || "";
+      const preferredBookmarkIdRaw = window.localStorage.getItem(selectedBookmarkStorageKey) || "";
       const preferredBookmarkId =
         !preferredBookmarkIdRaw.startsWith(SAVED_BOOKMARK_PREFIX) &&
         !preferredBookmarkIdRaw.startsWith(REPORT_BOOKMARK_PREFIX) &&
         localBookmarks.some((bookmark) => bookmark.id === preferredBookmarkIdRaw)
           ? toSavedBookmarkSelectionId(preferredBookmarkIdRaw)
           : preferredBookmarkIdRaw;
-      const preferredSavedBookmarkId = getSavedBookmarkIdFromSelection(
-        preferredBookmarkId
-      );
-      const preferredReportBookmarkName = getReportBookmarkNameFromSelection(
-        preferredBookmarkId
-      );
-      const prefersOriginalSelection = isOriginalReportSelection(
-        preferredBookmarkId
-      );
+      const preferredSavedBookmarkId = getSavedBookmarkIdFromSelection(preferredBookmarkId);
+      const preferredReportBookmarkName = getReportBookmarkNameFromSelection(preferredBookmarkId);
+      const prefersOriginalSelection = isOriginalReportSelection(preferredBookmarkId);
 
-      const preferredSavedBookmark = preferredSavedBookmarkId
-        ? localBookmarks.find((bookmark) => bookmark.id === preferredSavedBookmarkId)
-        : null;
+      const preferredSavedBookmark = preferredSavedBookmarkId ? localBookmarks.find((bookmark) => bookmark.id === preferredSavedBookmarkId) : null;
       const preferredReportBookmark = preferredReportBookmarkName
-        ? reportDefinedBookmarks.find(
-            (bookmark) => bookmark.name === preferredReportBookmarkName
-          )
+        ? reportDefinedBookmarks.find((bookmark) => bookmark.name === preferredReportBookmarkName)
         : null;
 
       const fallbackSelectionId = localBookmarks[0]?.id
@@ -1598,24 +1333,15 @@ export const PersonalizedEditableReport: React.FC<
         setSelectedBookmarkId(nextSelectionId);
         window.localStorage.setItem(selectedBookmarkStorageKey, nextSelectionId);
 
-        const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(
-          nextSelectionId
-        );
-        const selectedReportBookmarkName = getReportBookmarkNameFromSelection(
-          nextSelectionId
-        );
+        const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(nextSelectionId);
+        const selectedReportBookmarkName = getReportBookmarkNameFromSelection(nextSelectionId);
 
         if (selectedSavedBookmarkId) {
-          const selectedSavedBookmark = localBookmarks.find(
-            (bookmark) => bookmark.id === selectedSavedBookmarkId
-          );
+          const selectedSavedBookmark = localBookmarks.find((bookmark) => bookmark.id === selectedSavedBookmarkId);
           if (selectedSavedBookmark) {
             await applyBookmarkProfile(selectedSavedBookmark);
           }
-        } else if (
-          selectedReportBookmarkName &&
-          typeof reportRef.current?.bookmarksManager?.apply === "function"
-        ) {
+        } else if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
           await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
           const activePage = await reportRef.current?.getActivePage?.();
           if (activePage?.name) {
@@ -1741,39 +1467,20 @@ export const PersonalizedEditableReport: React.FC<
             showLegend: Boolean(properties.showLegend),
             showXAxis: Boolean(properties.showXAxis),
             showYAxis: Boolean(properties.showYAxis),
-            titleText:
-              typeof properties.titleText === "string"
-                ? properties.titleText
-                : "",
-            titleAlign:
-              typeof properties.titleAlign === "string" && properties.titleAlign
-                ? properties.titleAlign
-                : "left",
+            titleText: typeof properties.titleText === "string" ? properties.titleText : "",
+            titleAlign: typeof properties.titleAlign === "string" && properties.titleAlign ? properties.titleAlign : "left",
           };
 
-          const roleTargets =
-            entry.roleTargets && typeof entry.roleTargets === "object"
-              ? entry.roleTargets
-              : {};
+          const roleTargets = entry.roleTargets && typeof entry.roleTargets === "object" ? entry.roleTargets : {};
 
           return {
-            id:
-              typeof entry.id === "string" && entry.id
-                ? entry.id
-                : createBookmarkId(),
+            id: typeof entry.id === "string" && entry.id ? entry.id : createBookmarkId(),
             visualType: entry.visualType,
             roleTargets,
             layout: normalizedLayout,
             properties: normalizedProperties,
-            runtimeVisualName:
-              typeof entry.runtimeVisualName === "string" &&
-              entry.runtimeVisualName
-                ? entry.runtimeVisualName
-                : undefined,
-            createdAt:
-              typeof entry.createdAt === "string"
-                ? entry.createdAt
-                : new Date().toISOString(),
+            runtimeVisualName: typeof entry.runtimeVisualName === "string" && entry.runtimeVisualName ? entry.runtimeVisualName : undefined,
+            createdAt: typeof entry.createdAt === "string" ? entry.createdAt : new Date().toISOString(),
           } as SessionQuickVisualProfile;
         })
         .filter(Boolean) as SessionQuickVisualProfile[];
@@ -1784,12 +1491,9 @@ export const PersonalizedEditableReport: React.FC<
 
   const writeSessionQuickVisualProfiles = useCallback(
     (profiles: SessionQuickVisualProfile[]) => {
-      window.sessionStorage.setItem(
-        quickVisualSessionStorageKey,
-        JSON.stringify(profiles)
-      );
+      window.sessionStorage.setItem(quickVisualSessionStorageKey, JSON.stringify(profiles));
     },
-    [quickVisualSessionStorageKey]
+    [quickVisualSessionStorageKey],
   );
 
   const appendSessionQuickVisualProfile = useCallback(
@@ -1798,7 +1502,7 @@ export const PersonalizedEditableReport: React.FC<
       const nextProfiles = [...existingProfiles, profile];
       writeSessionQuickVisualProfiles(nextProfiles);
     },
-    [readSessionQuickVisualProfiles, writeSessionQuickVisualProfiles]
+    [readSessionQuickVisualProfiles, writeSessionQuickVisualProfiles],
   );
 
   const syncSessionQuickVisualProfilesFromPage = useCallback(async () => {
@@ -1826,9 +1530,7 @@ export const PersonalizedEditableReport: React.FC<
     }
 
     const visualByName = new Map<string, any>(
-      (visuals || [])
-        .filter((visual: any) => visual?.name)
-        .map((visual: any) => [visual.name, visual] as [string, any])
+      (visuals || []).filter((visual: any) => visual?.name).map((visual: any) => [visual.name, visual] as [string, any]),
     );
 
     let hasChanges = false;
@@ -1846,12 +1548,8 @@ export const PersonalizedEditableReport: React.FC<
       const nextLayout: SessionQuickVisualLayout = {
         x: Number(layout.x) || profile.layout.x,
         y: Number(layout.y) || profile.layout.y,
-        width:
-          Number(layout.width) > 0 ? Number(layout.width) : profile.layout.width,
-        height:
-          Number(layout.height) > 0
-            ? Number(layout.height)
-            : profile.layout.height,
+        width: Number(layout.width) > 0 ? Number(layout.width) : profile.layout.width,
+        height: Number(layout.height) > 0 ? Number(layout.height) : profile.layout.height,
       };
 
       const layoutChanged =
@@ -1876,11 +1574,7 @@ export const PersonalizedEditableReport: React.FC<
     }
 
     return hasChanges;
-  }, [
-    allowEdit,
-    readSessionQuickVisualProfiles,
-    writeSessionQuickVisualProfiles,
-  ]);
+  }, [allowEdit, readSessionQuickVisualProfiles, writeSessionQuickVisualProfiles]);
 
   const scheduleSessionQuickVisualProfileSync = useCallback(() => {
     if (quickVisualSessionSyncTimerRef.current) {
@@ -1894,12 +1588,7 @@ export const PersonalizedEditableReport: React.FC<
   }, [syncSessionQuickVisualProfilesFromPage]);
 
   useEffect(() => {
-    if (
-      !autoSaveEnabled ||
-      !reportRef.current ||
-      autoSaveRevision === 0 ||
-      isHydratingPersonalization
-    ) {
+    if (!autoSaveEnabled || !reportRef.current || autoSaveRevision === 0 || isHydratingPersonalization) {
       return;
     }
 
@@ -1969,13 +1658,7 @@ export const PersonalizedEditableReport: React.FC<
         }
       })();
     };
-  }, [
-    isReportLoaded,
-    autoSaveEnabled,
-    reportRef,
-    getCurrentPersonalizationPayload,
-    savePersonalization,
-  ]);
+  }, [isReportLoaded, autoSaveEnabled, reportRef, getCurrentPersonalizationPayload, savePersonalization]);
 
   const triggerAutoSaveRevision = useCallback(() => {
     if (!isReportLoaded || isHydratingPersonalization) {
@@ -2028,7 +1711,7 @@ export const PersonalizedEditableReport: React.FC<
 
       return false;
     },
-    [authoringEmbedError]
+    [authoringEmbedError],
   );
 
   // FIX: Always use the dedicated blank authoring page (pages[1] per the showcase pattern).
@@ -2073,7 +1756,7 @@ export const PersonalizedEditableReport: React.FC<
           authoringPageRef.current = activePage;
           return activePage;
         }
-      } catch { }
+      } catch {}
     }
 
     return null;
@@ -2119,14 +1802,12 @@ export const PersonalizedEditableReport: React.FC<
       if (typeof authoringReportRef.current.getMode === "function") {
         try {
           const currentMode = await authoringReportRef.current.getMode();
-          const isEditMode =
-            currentMode === models.ViewMode.Edit ||
-            String(currentMode).toLowerCase() === "edit";
+          const isEditMode = currentMode === models.ViewMode.Edit || String(currentMode).toLowerCase() === "edit";
 
           if (!isEditMode) {
             return "Quick visual editing is only available in Edit mode.";
           }
-        } catch { }
+        } catch {}
       }
 
       const activePage = await getActivePageForQuickVisual();
@@ -2140,19 +1821,11 @@ export const PersonalizedEditableReport: React.FC<
 
       return null;
     },
-    [
-      allowEdit,
-      authoringEmbedError,
-      canAccessQuickVisualAPIs,
-      getActivePageForQuickVisual,
-    ]
+    [allowEdit, authoringEmbedError, canAccessQuickVisualAPIs, getActivePageForQuickVisual],
   );
 
   const getQuickVisualPages = useCallback(async () => {
-    if (
-      authoringReportRef.current &&
-      typeof authoringReportRef.current.getPages === "function"
-    ) {
+    if (authoringReportRef.current && typeof authoringReportRef.current.getPages === "function") {
       try {
         const pages = await authoringReportRef.current.getPages();
         if (Array.isArray(pages) && pages.length) {
@@ -2174,7 +1847,7 @@ export const PersonalizedEditableReport: React.FC<
     if (reportRef.current && typeof reportRef.current.getActivePage === "function") {
       try {
         targetPage = await reportRef.current.getActivePage();
-      } catch { }
+      } catch {}
     }
 
     if (!targetPage || typeof targetPage.getVisuals !== "function") {
@@ -2220,14 +1893,12 @@ export const PersonalizedEditableReport: React.FC<
 
     collectFromFieldCatalog(customQuickVisualFieldCatalog);
     try {
-      const savedCatalog = window.localStorage.getItem(
-        quickVisualFieldCatalogStorageKey
-      );
+      const savedCatalog = window.localStorage.getItem(quickVisualFieldCatalogStorageKey);
       if (savedCatalog) {
         const parsedCatalog = JSON.parse(savedCatalog);
         collectFromFieldCatalog(parsedCatalog);
       }
-    } catch { }
+    } catch {}
 
     const pages = await getQuickVisualPages();
 
@@ -2240,7 +1911,7 @@ export const PersonalizedEditableReport: React.FC<
         try {
           const pageFilters = await page.getFilters();
           collectFromUnknownValue(pageFilters);
-        } catch { }
+        } catch {}
       }
 
       let visuals: any[] = [];
@@ -2259,7 +1930,7 @@ export const PersonalizedEditableReport: React.FC<
           try {
             const visualFilters = await visual.getFilters();
             collectFromUnknownValue(visualFilters);
-          } catch { }
+          } catch {}
         }
 
         if (typeof visual.getDataFields !== "function") {
@@ -2270,9 +1941,7 @@ export const PersonalizedEditableReport: React.FC<
         if (typeof visual.getCapabilities === "function") {
           try {
             const capabilities = await visual.getCapabilities();
-            const dataRoles = Array.isArray(capabilities?.dataRoles)
-              ? capabilities.dataRoles
-              : [];
+            const dataRoles = Array.isArray(capabilities?.dataRoles) ? capabilities.dataRoles : [];
 
             dataRoles.forEach((role: any) => {
               if (typeof role?.name === "string" && role.name) {
@@ -2282,7 +1951,7 @@ export const PersonalizedEditableReport: React.FC<
                 roleNames.add(role.displayName);
               }
             });
-          } catch { }
+          } catch {}
         }
 
         for (const roleName of roleNames) {
@@ -2295,19 +1964,16 @@ export const PersonalizedEditableReport: React.FC<
             for (const field of fields) {
               addQuickVisualFieldOption(optionByKey, field);
             }
-          } catch { }
+          } catch {}
         }
       }
     }
 
-    if (
-      authoringReportRef.current &&
-      typeof authoringReportRef.current.getFilters === "function"
-    ) {
+    if (authoringReportRef.current && typeof authoringReportRef.current.getFilters === "function") {
       try {
         const reportFilters = await authoringReportRef.current.getFilters();
         collectFromUnknownValue(reportFilters);
-      } catch { }
+      } catch {}
     }
 
     try {
@@ -2315,51 +1981,38 @@ export const PersonalizedEditableReport: React.FC<
       if (selectedData) {
         collectFromUnknownValue(JSON.parse(selectedData));
       }
-    } catch { }
+    } catch {}
 
-    const options = Array.from(optionByKey.values()).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
+    const options = Array.from(optionByKey.values()).sort((a, b) => a.label.localeCompare(b.label));
     setQuickVisualFieldOptions(options);
     return options;
-  }, [
-    customQuickVisualFieldCatalog,
-    getQuickVisualPages,
-    quickVisualFieldCatalogStorageKey,
-  ]);
+  }, [customQuickVisualFieldCatalog, getQuickVisualPages, quickVisualFieldCatalogStorageKey]);
 
-  const getRoleSelectionsFromVisual = useCallback(
-    async (
-      visual: any,
-      visualType: string,
-      fieldOptions: QuickVisualFieldOption[]
-    ) => {
-      const selections: QuickVisualRoleSelections = {};
-      if (!visual || typeof visual.getDataFields !== "function") {
-        return selections;
-      }
-
-      const roleNames = getQuickVisualOption(visualType).dataRoleNames;
-      const optionKeys = new Set(fieldOptions.map((option) => option.key));
-
-      for (const roleName of roleNames) {
-        try {
-          const dataFields = await visual.getDataFields(roleName);
-          if (!Array.isArray(dataFields) || !dataFields[0]) {
-            continue;
-          }
-
-          const key = getQuickVisualFieldKey(dataFields[0]);
-          if (key && optionKeys.has(key)) {
-            selections[roleName] = key;
-          }
-        } catch { }
-      }
-
+  const getRoleSelectionsFromVisual = useCallback(async (visual: any, visualType: string, fieldOptions: QuickVisualFieldOption[]) => {
+    const selections: QuickVisualRoleSelections = {};
+    if (!visual || typeof visual.getDataFields !== "function") {
       return selections;
-    },
-    []
-  );
+    }
+
+    const roleNames = getQuickVisualOption(visualType).dataRoleNames;
+    const optionKeys = new Set(fieldOptions.map((option) => option.key));
+
+    for (const roleName of roleNames) {
+      try {
+        const dataFields = await visual.getDataFields(roleName);
+        if (!Array.isArray(dataFields) || !dataFields[0]) {
+          continue;
+        }
+
+        const key = getQuickVisualFieldKey(dataFields[0]);
+        if (key && optionKeys.has(key)) {
+          selections[roleName] = key;
+        }
+      } catch {}
+    }
+
+    return selections;
+  }, []);
 
   const syncQuickVisualSelectionsFromVisual = useCallback(
     async (visualName: string, visualType: string) => {
@@ -2375,7 +2028,7 @@ export const PersonalizedEditableReport: React.FC<
         if (reportRef.current && typeof reportRef.current.getActivePage === "function") {
           try {
             targetPage = await reportRef.current.getActivePage();
-          } catch { }
+          } catch {}
         }
 
         if (!targetPage || typeof targetPage.getVisuals !== "function") {
@@ -2384,27 +2037,20 @@ export const PersonalizedEditableReport: React.FC<
         }
 
         const visuals = await targetPage.getVisuals();
-        const matchedVisual = (visuals || []).find(
-          (visual: any) => visual?.name === visualName
-        );
-        const selections = await getRoleSelectionsFromVisual(
-          matchedVisual,
-          visualType,
-          quickVisualFieldOptions
-        );
+        const matchedVisual = (visuals || []).find((visual: any) => visual?.name === visualName);
+        const selections = await getRoleSelectionsFromVisual(matchedVisual, visualType, quickVisualFieldOptions);
         setQuickVisualRoleSelections(selections);
       } catch (error) {
         console.warn("Unable to read selected visual fields", error);
         setQuickVisualRoleSelections({});
       }
     },
-    [reportRef, getRoleSelectionsFromVisual, quickVisualFieldOptions]
+    [reportRef, getRoleSelectionsFromVisual, quickVisualFieldOptions],
   );
 
   const openQuickVisualModal = useCallback(
     async (mode: QuickVisualMode, preferredVisualName?: string) => {
-      const authoringAvailabilityMessage =
-        await getQuickVisualAuthoringAvailabilityMessage(mode);
+      const authoringAvailabilityMessage = await getQuickVisualAuthoringAvailabilityMessage(mode);
       if (authoringAvailabilityMessage) {
         showQuickVisualStatus(authoringAvailabilityMessage);
         return;
@@ -2417,29 +2063,21 @@ export const PersonalizedEditableReport: React.FC<
         const fieldOptions = await refreshQuickVisualFieldOptions();
 
         if (mode === "change" && !targets.length) {
-          showQuickVisualStatus(
-            "No editable visuals were found on the active page."
-          );
+          showQuickVisualStatus("No editable visuals were found on the active page.");
           return;
         }
 
         if (!fieldOptions.length) {
           showQuickVisualStatus(
-            "No usable fields were found. Open a report page with data-bound visuals, or provide quickVisualFieldCatalog entries for missing fields."
+            "No usable fields were found. Open a report page with data-bound visuals, or provide quickVisualFieldCatalog entries for missing fields.",
           );
           return;
         }
 
-        const defaultVisual =
-          (preferredVisualName
-            ? targets.find((visual) => visual.name === preferredVisualName)
-            : null) || targets[0];
+        const defaultVisual = (preferredVisualName ? targets.find((visual) => visual.name === preferredVisualName) : null) || targets[0];
 
         const defaultType =
-          defaultVisual?.type &&
-          QUICK_VISUAL_OPTIONS.some((option) => option.name === defaultVisual.type)
-            ? defaultVisual.type
-            : "columnChart";
+          defaultVisual?.type && QUICK_VISUAL_OPTIONS.some((option) => option.name === defaultVisual.type) ? defaultVisual.type : "columnChart";
 
         const option = getQuickVisualOption(defaultType);
 
@@ -2453,8 +2091,7 @@ export const PersonalizedEditableReport: React.FC<
         setQuickVisualShowYAxis(option.properties.includes("yAxis"));
         setQuickVisualStatus(null);
 
-        const nextTargetVisualName =
-          mode === "change" ? defaultVisual?.name || "" : "";
+        const nextTargetVisualName = mode === "change" ? defaultVisual?.name || "" : "";
         setQuickVisualTargetVisualName(nextTargetVisualName);
 
         let defaultSelections: QuickVisualRoleSelections = {};
@@ -2464,18 +2101,12 @@ export const PersonalizedEditableReport: React.FC<
           if (reportRef.current && typeof reportRef.current.getActivePage === "function") {
             try {
               targetPage = await reportRef.current.getActivePage();
-            } catch { }
+            } catch {}
           }
           if (targetPage && typeof targetPage.getVisuals === "function") {
             const pageVisuals = await targetPage.getVisuals();
-            const matchedVisual = (pageVisuals || []).find(
-              (visual: any) => visual?.name === defaultVisual.name
-            );
-            defaultSelections = await getRoleSelectionsFromVisual(
-              matchedVisual,
-              defaultType,
-              fieldOptions
-            );
+            const matchedVisual = (pageVisuals || []).find((visual: any) => visual?.name === defaultVisual.name);
+            defaultSelections = await getRoleSelectionsFromVisual(matchedVisual, defaultType, fieldOptions);
           }
         }
 
@@ -2484,9 +2115,7 @@ export const PersonalizedEditableReport: React.FC<
         setIsQuickVisualModalOpen(true);
       } catch (error) {
         console.error("Unable to open quick visual modal", error);
-        showQuickVisualStatus(
-          "Unable to open quick visual editor for this report."
-        );
+        showQuickVisualStatus("Unable to open quick visual editor for this report.");
       }
     },
     [
@@ -2497,7 +2126,7 @@ export const PersonalizedEditableReport: React.FC<
       refreshQuickVisualTargets,
       showQuickVisualStatus,
       syncVisibleStateToAuthoring,
-    ]
+    ],
   );
 
   const closeQuickVisualModal = () => {
@@ -2508,28 +2137,25 @@ export const PersonalizedEditableReport: React.FC<
     setIsQuickVisualModalOpen(false);
   };
 
-  const applyQuickVisualProperty = useCallback(
-    async (visual: any, propertyName: QuickVisualProperty, value: any) => {
-      if (!visual || typeof visual.setProperty !== "function") {
-        return;
-      }
+  const applyQuickVisualProperty = useCallback(async (visual: any, propertyName: QuickVisualProperty, value: any) => {
+    if (!visual || typeof visual.setProperty !== "function") {
+      return;
+    }
 
-      const selector = toQuickVisualPropertySelector(propertyName);
-      if (!selector) {
-        return;
-      }
+    const selector = toQuickVisualPropertySelector(propertyName);
+    if (!selector) {
+      return;
+    }
 
-      try {
-        await visual.setProperty(selector, {
-          schema: QUICK_VISUAL_SCHEMAS.property,
-          value,
-        });
-      } catch (error) {
-        console.warn(`Unable to set visual property ${propertyName}`, error);
-      }
-    },
-    []
-  );
+    try {
+      await visual.setProperty(selector, {
+        schema: QUICK_VISUAL_SCHEMAS.property,
+        value,
+      });
+    } catch (error) {
+      console.warn(`Unable to set visual property ${propertyName}`, error);
+    }
+  }, []);
 
   const applyQuickVisualProperties = useCallback(
     async (visual: any, visualType: string) => {
@@ -2567,11 +2193,7 @@ export const PersonalizedEditableReport: React.FC<
       }
 
       if (quickVisualTitle.trim()) {
-        await applyQuickVisualProperty(
-          visual,
-          "titleText",
-          quickVisualTitle.trim()
-        );
+        await applyQuickVisualProperty(visual, "titleText", quickVisualTitle.trim());
       } else if (typeof visual?.resetProperty === "function") {
         const titleTextSelector = toQuickVisualPropertySelector("titleText");
         if (titleTextSelector) {
@@ -2593,46 +2215,39 @@ export const PersonalizedEditableReport: React.FC<
       quickVisualShowYAxis,
       quickVisualTitle,
       quickVisualTitleAlign,
-    ]
+    ],
   );
 
   // FIX: Remove all active data fields from a visual before changing type,
   // matching the showcase pattern (removeAllActiveDataRoles → changeType).
-  const removeAllActiveDataRoles = useCallback(
-    async (visual: any, visualType: string) => {
-      if (!visual || typeof visual.getDataFields !== "function") {
-        return;
-      }
+  const removeAllActiveDataRoles = useCallback(async (visual: any, visualType: string) => {
+    if (!visual || typeof visual.getDataFields !== "function") {
+      return;
+    }
 
-      const roleNames = getQuickVisualOption(visualType).dataRoleNames;
+    const roleNames = getQuickVisualOption(visualType).dataRoleNames;
 
-      for (const roleName of roleNames) {
-        try {
-          const existingFields = await visual.getDataFields(roleName);
-          if (!Array.isArray(existingFields)) {
-            continue;
-          }
-
-          // Remove all fields by repeatedly removing index 0
-          for (let idx = 0; idx < existingFields.length; idx += 1) {
-            if (typeof visual.removeDataField === "function") {
-              await visual.removeDataField(roleName, 0);
-            }
-          }
-        } catch (error) {
-          console.warn(`Unable to remove data role ${roleName} before changeType`, error);
+    for (const roleName of roleNames) {
+      try {
+        const existingFields = await visual.getDataFields(roleName);
+        if (!Array.isArray(existingFields)) {
+          continue;
         }
+
+        // Remove all fields by repeatedly removing index 0
+        for (let idx = 0; idx < existingFields.length; idx += 1) {
+          if (typeof visual.removeDataField === "function") {
+            await visual.removeDataField(roleName, 0);
+          }
+        }
+      } catch (error) {
+        console.warn(`Unable to remove data role ${roleName} before changeType`, error);
       }
-    },
-    []
-  );
+    }
+  }, []);
 
   const applyQuickVisualDataRoles = useCallback(
-    async (
-      visual: any,
-      visualType: string,
-      roleSelections: QuickVisualRoleSelections
-    ) => {
+    async (visual: any, visualType: string, roleSelections: QuickVisualRoleSelections) => {
       if (!visual) {
         return;
       }
@@ -2640,10 +2255,7 @@ export const PersonalizedEditableReport: React.FC<
       const roleNames = getQuickVisualOption(visualType).dataRoleNames;
 
       for (const roleName of roleNames) {
-        if (
-          typeof visual.getDataFields === "function" &&
-          typeof visual.removeDataField === "function"
-        ) {
+        if (typeof visual.getDataFields === "function" && typeof visual.removeDataField === "function") {
           try {
             const existingFields = await visual.getDataFields(roleName);
             if (Array.isArray(existingFields)) {
@@ -2661,9 +2273,7 @@ export const PersonalizedEditableReport: React.FC<
           continue;
         }
 
-        const selectedField = quickVisualFieldOptions.find(
-          (option) => option.key === selectedFieldKey
-        );
+        const selectedField = quickVisualFieldOptions.find((option) => option.key === selectedFieldKey);
         if (!selectedField) {
           continue;
         }
@@ -2675,57 +2285,43 @@ export const PersonalizedEditableReport: React.FC<
         }
       }
     },
-    [quickVisualFieldOptions]
+    [quickVisualFieldOptions],
   );
 
-  const applyQuickVisualDataRolesFromTargets = useCallback(
-    async (
-      visual: any,
-      visualType: string,
-      roleTargets: Record<string, any>
-    ) => {
-      if (!visual) {
-        return;
-      }
+  const applyQuickVisualDataRolesFromTargets = useCallback(async (visual: any, visualType: string, roleTargets: Record<string, any>) => {
+    if (!visual) {
+      return;
+    }
 
-      const roleNames = getQuickVisualOption(visualType).dataRoleNames;
+    const roleNames = getQuickVisualOption(visualType).dataRoleNames;
 
-      for (const roleName of roleNames) {
-        if (
-          typeof visual.getDataFields === "function" &&
-          typeof visual.removeDataField === "function"
-        ) {
-          try {
-            const existingFields = await visual.getDataFields(roleName);
-            if (Array.isArray(existingFields)) {
-              for (let idx = 0; idx < existingFields.length; idx += 1) {
-                await visual.removeDataField(roleName, 0);
-              }
-            }
-          } catch { }
-        }
-
-        const target = roleTargets?.[roleName];
-        if (!target || typeof visual.addDataField !== "function") {
-          continue;
-        }
-
+    for (const roleName of roleNames) {
+      if (typeof visual.getDataFields === "function" && typeof visual.removeDataField === "function") {
         try {
-          await visual.addDataField(roleName, target);
-        } catch (error) {
-          console.warn(`Unable to replay data role ${roleName}`, error);
-        }
+          const existingFields = await visual.getDataFields(roleName);
+          if (Array.isArray(existingFields)) {
+            for (let idx = 0; idx < existingFields.length; idx += 1) {
+              await visual.removeDataField(roleName, 0);
+            }
+          }
+        } catch {}
       }
-    },
-    []
-  );
+
+      const target = roleTargets?.[roleName];
+      if (!target || typeof visual.addDataField !== "function") {
+        continue;
+      }
+
+      try {
+        await visual.addDataField(roleName, target);
+      } catch (error) {
+        console.warn(`Unable to replay data role ${roleName}`, error);
+      }
+    }
+  }, []);
 
   const applyQuickVisualPropertiesFromProfile = useCallback(
-    async (
-      visual: any,
-      visualType: string,
-      properties: SessionQuickVisualProperties
-    ) => {
+    async (visual: any, visualType: string, properties: SessionQuickVisualProperties) => {
       const option = getQuickVisualOption(visualType);
       const supported = new Set(option.properties);
 
@@ -2751,7 +2347,7 @@ export const PersonalizedEditableReport: React.FC<
           if (selector) {
             try {
               await visual.resetProperty(selector);
-            } catch { }
+            } catch {}
           }
         }
         return;
@@ -2762,13 +2358,9 @@ export const PersonalizedEditableReport: React.FC<
         await applyQuickVisualProperty(visual, "titleText", titleText);
       }
 
-      await applyQuickVisualProperty(
-        visual,
-        "titleAlign",
-        properties.titleAlign || "left"
-      );
+      await applyQuickVisualProperty(visual, "titleAlign", properties.titleAlign || "left");
     },
-    [applyQuickVisualProperty]
+    [applyQuickVisualProperty],
   );
 
   const replaySessionQuickVisuals = useCallback(async () => {
@@ -2810,35 +2402,18 @@ export const PersonalizedEditableReport: React.FC<
           continue;
         }
 
-        await applyQuickVisualDataRolesFromTargets(
-          visual,
-          profile.visualType,
-          profile.roleTargets
-        );
-        await applyQuickVisualPropertiesFromProfile(
-          visual,
-          profile.visualType,
-          profile.properties
-        );
+        await applyQuickVisualDataRolesFromTargets(visual, profile.visualType, profile.roleTargets);
+        await applyQuickVisualPropertiesFromProfile(visual, profile.visualType, profile.properties);
 
         const visualLayout = visual.layout || {};
         nextProfiles.push({
           ...profile,
-          runtimeVisualName:
-            typeof visual.name === "string" && visual.name
-              ? visual.name
-              : profile.runtimeVisualName,
+          runtimeVisualName: typeof visual.name === "string" && visual.name ? visual.name : profile.runtimeVisualName,
           layout: {
             x: Number(visualLayout.x) || profile.layout.x,
             y: Number(visualLayout.y) || profile.layout.y,
-            width:
-              Number(visualLayout.width) > 0
-                ? Number(visualLayout.width)
-                : profile.layout.width,
-            height:
-              Number(visualLayout.height) > 0
-                ? Number(visualLayout.height)
-                : profile.layout.height,
+            width: Number(visualLayout.width) > 0 ? Number(visualLayout.width) : profile.layout.width,
+            height: Number(visualLayout.height) > 0 ? Number(visualLayout.height) : profile.layout.height,
           },
         });
 
@@ -2871,12 +2446,7 @@ export const PersonalizedEditableReport: React.FC<
   ]);
 
   useEffect(() => {
-    if (
-      !isReportLoaded ||
-      !isAuthoringReportLoaded ||
-      isHydratingPersonalization ||
-      hasReplayedSessionQuickVisualsRef.current
-    ) {
+    if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization || hasReplayedSessionQuickVisualsRef.current) {
       return;
     }
 
@@ -2885,42 +2455,24 @@ export const PersonalizedEditableReport: React.FC<
     void (async () => {
       const restoredCount = await replaySessionQuickVisuals();
       if (restoredCount > 0) {
-        showQuickVisualStatus(
-          `Restored ${restoredCount} session visual${
-            restoredCount === 1 ? "" : "s"
-          }.`
-        );
+        showQuickVisualStatus(`Restored ${restoredCount} session visual${restoredCount === 1 ? "" : "s"}.`);
       }
     })();
-  }, [
-    isAuthoringReportLoaded,
-    isHydratingPersonalization,
-    isReportLoaded,
-    replaySessionQuickVisuals,
-    showQuickVisualStatus,
-  ]);
+  }, [isAuthoringReportLoaded, isHydratingPersonalization, isReportLoaded, replaySessionQuickVisuals, showQuickVisualStatus]);
 
   const handleApplyQuickVisual = async () => {
-    const authoringAvailabilityMessage =
-      await getQuickVisualAuthoringAvailabilityMessage(quickVisualMode);
+    const authoringAvailabilityMessage = await getQuickVisualAuthoringAvailabilityMessage(quickVisualMode);
     if (authoringAvailabilityMessage) {
       showQuickVisualStatus(authoringAvailabilityMessage);
       return;
     }
 
     const roleNames = getQuickVisualOption(quickVisualType).dataRoleNames;
-    const selectedRoleCount = roleNames.filter(
-      (roleName) => !!quickVisualRoleSelections[roleName]
-    ).length;
-    const minimumRequiredRoles = Math.min(
-      QUICK_VISUAL_MIN_REQUIRED_FIELDS,
-      roleNames.length
-    );
+    const selectedRoleCount = roleNames.filter((roleName) => !!quickVisualRoleSelections[roleName]).length;
+    const minimumRequiredRoles = Math.min(QUICK_VISUAL_MIN_REQUIRED_FIELDS, roleNames.length);
 
     if (selectedRoleCount < minimumRequiredRoles) {
-      showQuickVisualStatus(
-        `Select at least ${minimumRequiredRoles} fields before creating the visual.`
-      );
+      showQuickVisualStatus(`Select at least ${minimumRequiredRoles} fields before creating the visual.`);
       return;
     }
 
@@ -2943,15 +2495,9 @@ export const PersonalizedEditableReport: React.FC<
         }
 
         const pageVisuals = await basePage.getVisuals();
-        const visualByName = new Map<string, any>(
-          (pageVisuals || []).map(
-            (visual: any) => [visual.name, visual] as [string, any]
-          )
-        );
+        const visualByName = new Map<string, any>((pageVisuals || []).map((visual: any) => [visual.name, visual] as [string, any]));
 
-        const targetVisual: any = quickVisualTargetVisualName
-          ? visualByName.get(quickVisualTargetVisualName)
-          : null;
+        const targetVisual: any = quickVisualTargetVisualName ? visualByName.get(quickVisualTargetVisualName) : null;
 
         if (!targetVisual) {
           throw new Error("Select a visual to change.");
@@ -2959,9 +2505,7 @@ export const PersonalizedEditableReport: React.FC<
 
         if (targetVisual.type !== quickVisualType) {
           if (typeof targetVisual.changeType !== "function") {
-            throw new Error(
-              "Change visual type is unavailable in this embed context. Enable report-authoring APIs for full quick visual support."
-            );
+            throw new Error("Change visual type is unavailable in this embed context. Enable report-authoring APIs for full quick visual support.");
           }
 
           // FIX: Remove all active data roles BEFORE changing type, per the showcase pattern.
@@ -2971,24 +2515,17 @@ export const PersonalizedEditableReport: React.FC<
           await targetVisual.changeType(quickVisualType);
         }
 
-        await applyQuickVisualDataRoles(
-          targetVisual,
-          quickVisualType,
-          quickVisualRoleSelections
-        );
+        await applyQuickVisualDataRoles(targetVisual, quickVisualType, quickVisualRoleSelections);
         await applyQuickVisualProperties(targetVisual, quickVisualType);
         scheduleSessionQuickVisualProfileSync();
         showQuickVisualStatus(`Updated visual "${targetVisual.title || targetVisual.name}".`);
-
       } else {
         // "create" mode: create a new visual on the dedicated blank authoring page
         // FIX: Use getActivePageForQuickVisual() which resolves to the blank authoring page
         const authoringPage = await getActivePageForQuickVisual();
 
         if (!authoringPage || typeof authoringPage.createVisual !== "function") {
-          throw new Error(
-            "Create visual is unavailable in this embed context. Enable report-authoring APIs for full quick visual support."
-          );
+          throw new Error("Create visual is unavailable in this embed context. Enable report-authoring APIs for full quick visual support.");
         }
 
         // FIX: Derive layout from base report visuals for a sensible default position
@@ -3021,7 +2558,9 @@ export const PersonalizedEditableReport: React.FC<
                 };
               }
             }
-          } catch { /* non-fatal: use default layout */ }
+          } catch {
+            /* non-fatal: use default layout */
+          }
         }
 
         // FIX: createVisual returns ICreateVisualResponse — always extract .visual from the response
@@ -3029,9 +2568,7 @@ export const PersonalizedEditableReport: React.FC<
         const newVisual: any = createVisualResponse?.visual ?? createVisualResponse;
 
         if (!newVisual) {
-          throw new Error(
-            "Unable to create visual. Try another visual type or role selection."
-          );
+          throw new Error("Unable to create visual. Try another visual type or role selection.");
         }
 
         // FIX: Store preview visual reference so it can be cleaned up or re-used
@@ -3047,11 +2584,7 @@ export const PersonalizedEditableReport: React.FC<
           await applyQuickVisualProperty(newVisual, "legend", false);
         }
 
-        await applyQuickVisualDataRoles(
-          newVisual,
-          quickVisualType,
-          quickVisualRoleSelections
-        );
+        await applyQuickVisualDataRoles(newVisual, quickVisualType, quickVisualRoleSelections);
         await applyQuickVisualProperties(newVisual, quickVisualType);
 
         const roleTargetsSnapshot: Record<string, any> = {};
@@ -3061,19 +2594,14 @@ export const PersonalizedEditableReport: React.FC<
             return;
           }
 
-          const selectedField = quickVisualFieldOptions.find(
-            (option) => option.key === selectedFieldKey
-          );
+          const selectedField = quickVisualFieldOptions.find((option) => option.key === selectedFieldKey);
           if (selectedField?.target) {
             roleTargetsSnapshot[roleName] = selectedField.target;
           }
         });
 
         // FIX: Use newVisual.name (not newVisual?.name) — .name is defined on the visual object
-        const runtimeVisualName: string | undefined =
-          typeof newVisual.name === "string" && newVisual.name
-            ? newVisual.name
-            : undefined;
+        const runtimeVisualName: string | undefined = typeof newVisual.name === "string" && newVisual.name ? newVisual.name : undefined;
 
         appendSessionQuickVisualProfile({
           id: createBookmarkId(),
@@ -3114,12 +2642,12 @@ export const PersonalizedEditableReport: React.FC<
       await refreshQuickVisualTargets();
     } catch (error) {
       console.error("Error applying quick visual changes", error);
-      
+
       let message = "Failed to apply quick visual changes.";
-      
+
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
-        
+
         if (errorMsg.includes("unavailable in this embed context")) {
           message = `⚠️ Edit access denied. Your user account doesn't have edit permissions in this workspace. Contact your Power BI admin to be added as a Member or Admin.`;
         } else if (errorMsg.includes("create visual")) {
@@ -3132,7 +2660,7 @@ export const PersonalizedEditableReport: React.FC<
           message = error.message;
         }
       }
-      
+
       showQuickVisualStatus(message);
     } finally {
       setIsQuickVisualApplying(false);
@@ -3194,13 +2722,7 @@ export const PersonalizedEditableReport: React.FC<
       // Capture current layout customizer state
       const layoutState = layoutCustomizerRef?.current?.getLayoutState?.() ?? undefined;
 
-      const nextBookmark = upsertCapturedBookmark(
-        bookmarkName,
-        bookmarkStateJson,
-        false,
-        "saveView",
-        layoutState
-      );
+      const nextBookmark = upsertCapturedBookmark(bookmarkName, bookmarkStateJson, false, "saveView", layoutState);
       if (!nextBookmark) {
         throw new Error("Unable to save captured bookmark state.");
       }
@@ -3209,9 +2731,7 @@ export const PersonalizedEditableReport: React.FC<
       setSelectedBookmarkId(nextSelectionId);
       window.localStorage.setItem(selectedBookmarkStorageKey, nextSelectionId);
 
-      showBookmarkStatus(
-        `✓ Saved view "${bookmarkName}" in your personal library.`
-      );
+      showBookmarkStatus(`✓ Saved view "${bookmarkName}" in your personal library.`);
 
       setSaveStatus("saved");
       setLastSaved(new Date(nextBookmark.updatedAt));
@@ -3252,17 +2772,11 @@ export const PersonalizedEditableReport: React.FC<
 
     await captureOriginalReportStateIfMissing();
 
-    const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(
-      bookmarkIdToLoad
-    );
-    const selectedReportBookmarkName = getReportBookmarkNameFromSelection(
-      bookmarkIdToLoad
-    );
+    const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(bookmarkIdToLoad);
+    const selectedReportBookmarkName = getReportBookmarkNameFromSelection(bookmarkIdToLoad);
 
     if (selectedSavedBookmarkId) {
-      const selectedBookmark = bookmarkProfiles.find(
-        (bookmark) => bookmark.id === selectedSavedBookmarkId
-      );
+      const selectedBookmark = bookmarkProfiles.find((bookmark) => bookmark.id === selectedSavedBookmarkId);
       if (!selectedBookmark) {
         showBookmarkStatus("Selected bookmark was not found.");
         return;
@@ -3285,16 +2799,10 @@ export const PersonalizedEditableReport: React.FC<
       return;
     }
 
-    if (
-      selectedReportBookmarkName &&
-      typeof reportRef.current?.bookmarksManager?.apply === "function"
-    ) {
+    if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
       await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
-      const selectedReportBookmark = reportBookmarks.find(
-        (bookmark) => bookmark.name === selectedReportBookmarkName
-      );
-      const bookmarkLabel =
-        selectedReportBookmark?.displayName || selectedReportBookmarkName;
+      const selectedReportBookmark = reportBookmarks.find((bookmark) => bookmark.name === selectedReportBookmarkName);
+      const bookmarkLabel = selectedReportBookmark?.displayName || selectedReportBookmarkName;
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus(`Loaded bookmark "${bookmarkLabel}"`);
       const activePage = await reportRef.current?.getActivePage?.();
@@ -3318,21 +2826,15 @@ export const PersonalizedEditableReport: React.FC<
       return;
     }
 
-    const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(
-      selectedBookmarkId
-    );
+    const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(selectedBookmarkId);
     if (!selectedSavedBookmarkId) {
       showBookmarkStatus("Report bookmarks cannot be deleted from the app.");
       return;
     }
 
-    const selectedBookmark = bookmarkProfiles.find(
-      (bookmark) => bookmark.id === selectedSavedBookmarkId
-    );
+    const selectedBookmark = bookmarkProfiles.find((bookmark) => bookmark.id === selectedSavedBookmarkId);
 
-    const nextBookmarks = bookmarkProfiles.filter(
-      (bookmark) => bookmark.id !== selectedSavedBookmarkId
-    );
+    const nextBookmarks = bookmarkProfiles.filter((bookmark) => bookmark.id !== selectedSavedBookmarkId);
     persistBookmarks(nextBookmarks);
 
     const fallbackSelectionId = nextBookmarks[0]?.id
@@ -3364,7 +2866,7 @@ export const PersonalizedEditableReport: React.FC<
     } catch (error) {
       console.error("Error handling filter changes:", error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportRef]);
 
   const handlePageChanged = useCallback((event?: any) => {
@@ -3377,7 +2879,7 @@ export const PersonalizedEditableReport: React.FC<
     } catch (error) {
       console.error("Error handling page change:", error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const defaultEmbedReportEventHandlers: Map<string, EventHandler> = useMemo(
@@ -3417,46 +2919,26 @@ export const PersonalizedEditableReport: React.FC<
               const latestReportBookmarks = await loadReportBookmarks(true);
 
               const matchedReportBookmark = appliedBookmarkName
-                ? (
-                    latestReportBookmarks.length > 0
-                      ? latestReportBookmarks
-                      : reportBookmarks
-                  ).find(
-                    (bookmark) =>
-                      bookmark.name === appliedBookmarkName ||
-                      bookmark.displayName === appliedBookmarkName
+                ? (latestReportBookmarks.length > 0 ? latestReportBookmarks : reportBookmarks).find(
+                    (bookmark) => bookmark.name === appliedBookmarkName || bookmark.displayName === appliedBookmarkName,
                   )
                 : null;
 
               if (matchedReportBookmark) {
-                const nextSelectionId = toReportBookmarkSelectionId(
-                  matchedReportBookmark.name
-                );
+                const nextSelectionId = toReportBookmarkSelectionId(matchedReportBookmark.name);
                 setSelectedBookmarkId(nextSelectionId);
-                window.localStorage.setItem(
-                  selectedBookmarkStorageKey,
-                  nextSelectionId
-                );
+                window.localStorage.setItem(selectedBookmarkStorageKey, nextSelectionId);
                 return;
               }
 
               const existingBookmarkByName = appliedBookmarkName
-                ? bookmarkProfilesRef.current.find(
-                    (bookmark) =>
-                      bookmark.name.trim().toLowerCase() ===
-                      appliedBookmarkName.trim().toLowerCase()
-                  )
+                ? bookmarkProfilesRef.current.find((bookmark) => bookmark.name.trim().toLowerCase() === appliedBookmarkName.trim().toLowerCase())
                 : null;
 
               if (existingBookmarkByName) {
-                const nextSelectionId = toSavedBookmarkSelectionId(
-                  existingBookmarkByName.id
-                );
+                const nextSelectionId = toSavedBookmarkSelectionId(existingBookmarkByName.id);
                 setSelectedBookmarkId(nextSelectionId);
-                window.localStorage.setItem(
-                  selectedBookmarkStorageKey,
-                  nextSelectionId
-                );
+                window.localStorage.setItem(selectedBookmarkStorageKey, nextSelectionId);
                 showBookmarkStatus(`Synced bookmark "${existingBookmarkByName.name}"`);
                 return;
               }
@@ -3479,37 +2961,20 @@ export const PersonalizedEditableReport: React.FC<
               }
 
               const existingBookmarkByState = bookmarkProfilesRef.current.find(
-                (bookmark) =>
-                  bookmark.state === bookmarkStateJson ||
-                  bookmark.bookmarkStateJson === bookmarkStateJson
+                (bookmark) => bookmark.state === bookmarkStateJson || bookmark.bookmarkStateJson === bookmarkStateJson,
               );
 
               if (existingBookmarkByState) {
-                const nextSelectionId = toSavedBookmarkSelectionId(
-                  existingBookmarkByState.id
-                );
+                const nextSelectionId = toSavedBookmarkSelectionId(existingBookmarkByState.id);
                 setSelectedBookmarkId(nextSelectionId);
-                window.localStorage.setItem(
-                  selectedBookmarkStorageKey,
-                  nextSelectionId
-                );
-                showBookmarkStatus(
-                  `Synced bookmark "${existingBookmarkByState.name}"`
-                );
+                window.localStorage.setItem(selectedBookmarkStorageKey, nextSelectionId);
+                showBookmarkStatus(`Synced bookmark "${existingBookmarkByState.name}"`);
                 return;
               }
 
-              const resolvedBookmarkName = toReadableBookmarkName(
-                captured?.displayName,
-                appliedBookmarkName
-              );
+              const resolvedBookmarkName = toReadableBookmarkName(captured?.displayName, appliedBookmarkName);
 
-              const syncedBookmark = upsertCapturedBookmark(
-                resolvedBookmarkName,
-                bookmarkStateJson,
-                true,
-                "syncApplied"
-              );
+              const syncedBookmark = upsertCapturedBookmark(resolvedBookmarkName, bookmarkStateJson, true, "syncApplied");
               if (syncedBookmark) {
                 showBookmarkStatus(`Synced bookmark "${syncedBookmark.name}"`);
               }
@@ -3521,8 +2986,7 @@ export const PersonalizedEditableReport: React.FC<
         [
           "commandTriggered",
           (event?: any) => {
-            const commandName =
-              event?.detail?.command || event?.detail?.name || event?.detail?.id;
+            const commandName = event?.detail?.command || event?.detail?.name || event?.detail?.id;
             const normalizedCommandName = String(commandName || "").toLowerCase();
 
             if (normalizedCommandName === "createquickvisual") {
@@ -3534,8 +2998,7 @@ export const PersonalizedEditableReport: React.FC<
               return;
             }
 
-            const visualName =
-              event?.detail?.visual?.name || event?.detail?.data?.visual?.name;
+            const visualName = event?.detail?.visual?.name || event?.detail?.data?.visual?.name;
             void openQuickVisualModal("change", visualName);
           },
         ],
@@ -3545,10 +3008,7 @@ export const PersonalizedEditableReport: React.FC<
             void openQuickVisualModal("create");
           },
         ],
-        [
-          "loaded",
-          () => {},
-        ],
+        ["loaded", () => {}],
         [
           "rendered",
           async () => {
@@ -3587,23 +3047,20 @@ export const PersonalizedEditableReport: React.FC<
       openQuickVisualModal,
       isReportLoaded,
       captureOriginalReportStateIfMissing,
-    ]
+    ],
   );
 
-  const mergedEmbedReportEventHandlers: Map<string, EventHandler> = useMemo(
-    () => {
-      const merged = new Map(defaultEmbedReportEventHandlers);
-      if (embedReportEventHandlers && embedReportEventHandlers.size > 0) {
-        embedReportEventHandlers.forEach((handler, eventName) => {
-          if (eventName) {
-            merged.set(eventName, handler);
-          }
-        });
-      }
-      return merged;
-    },
-    [defaultEmbedReportEventHandlers, embedReportEventHandlers]
-  );
+  const mergedEmbedReportEventHandlers: Map<string, EventHandler> = useMemo(() => {
+    const merged = new Map(defaultEmbedReportEventHandlers);
+    if (embedReportEventHandlers && embedReportEventHandlers.size > 0) {
+      embedReportEventHandlers.forEach((handler, eventName) => {
+        if (eventName) {
+          merged.set(eventName, handler);
+        }
+      });
+    }
+    return merged;
+  }, [defaultEmbedReportEventHandlers, embedReportEventHandlers]);
 
   // FIX: On authoring report "loaded", navigate to pages[1] (the blank authoring page)
   // and store it in authoringPageRef. This matches the showcase pattern exactly:
@@ -3616,10 +3073,7 @@ export const PersonalizedEditableReport: React.FC<
           async () => {
             setAuthoringEmbedError(null);
             try {
-              if (
-                authoringReportRef.current &&
-                typeof authoringReportRef.current.getPages === "function"
-              ) {
+              if (authoringReportRef.current && typeof authoringReportRef.current.getPages === "function") {
                 const pages = await authoringReportRef.current.getPages();
                 if (Array.isArray(pages) && pages.length > 1) {
                   // pages[1] is the blank page designated for visual authoring
@@ -3654,7 +3108,7 @@ export const PersonalizedEditableReport: React.FC<
           },
         ],
       ]),
-    [isAuthoringReportLoaded, toAuthoringEmbedErrorMessage]
+    [isAuthoringReportLoaded, toAuthoringEmbedErrorMessage],
   );
 
   const handleReportLoadAttachment = useCallback(
@@ -3663,7 +3117,7 @@ export const PersonalizedEditableReport: React.FC<
         onReportLoadReportAttachmentFunction(report);
       }
     },
-    [onReportLoadReportAttachmentFunction]
+    [onReportLoadReportAttachmentFunction],
   );
 
   const handleAuthoringReportLoadAttachment = useCallback(() => {
@@ -3709,36 +3163,23 @@ export const PersonalizedEditableReport: React.FC<
   };
 
   const selectedQuickVisualOption = getQuickVisualOption(quickVisualType);
-  const selectedQuickVisualRolesCount = selectedQuickVisualOption.dataRoleNames.filter(
-    (roleName) => !!quickVisualRoleSelections[roleName]
-  ).length;
-  const requiredQuickVisualRoles = Math.min(
-    QUICK_VISUAL_MIN_REQUIRED_FIELDS,
-    selectedQuickVisualOption.dataRoleNames.length
-  );
+  const selectedQuickVisualRolesCount = selectedQuickVisualOption.dataRoleNames.filter((roleName) => !!quickVisualRoleSelections[roleName]).length;
+  const requiredQuickVisualRoles = Math.min(QUICK_VISUAL_MIN_REQUIRED_FIELDS, selectedQuickVisualOption.dataRoleNames.length);
   const canApplyQuickVisual =
     quickVisualFieldOptions.length > 0 &&
     selectedQuickVisualRolesCount >= requiredQuickVisualRoles &&
     (quickVisualMode !== "change" || !!quickVisualTargetVisualName);
-  const showLegendToggle = selectedQuickVisualOption.properties.includes(
-    "legend"
-  );
+  const showLegendToggle = selectedQuickVisualOption.properties.includes("legend");
   const showXAxisToggle = selectedQuickVisualOption.properties.includes("xAxis");
   const showYAxisToggle = selectedQuickVisualOption.properties.includes("yAxis");
-  const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(
-    selectedBookmarkId
-  );
-
+  const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(selectedBookmarkId);
+  console.log(reportSettings);
   return (
     <div className="personalized-editable-report">
       <div className="report-toolbar">
         <div className="toolbar-row">
           <div className="toolbar-cluster primary-actions">
-            <button
-              onClick={openSaveBookmarkModal}
-              className="btn btn-bookmark-save"
-              title="Save current view as a bookmark state"
-            >
+            <button onClick={openSaveBookmarkModal} className="btn btn-bookmark-save" title="Save current view as a bookmark state">
               Save View
             </button>
           </div>
@@ -3762,10 +3203,7 @@ export const PersonalizedEditableReport: React.FC<
                 {reportBookmarks.length > 0 && (
                   <optgroup label="Power BI report bookmarks">
                     {reportBookmarks.map((bookmark) => (
-                      <option
-                        key={`report_${bookmark.name}`}
-                        value={toReportBookmarkSelectionId(bookmark.name)}
-                      >
+                      <option key={`report_${bookmark.name}`} value={toReportBookmarkSelectionId(bookmark.name)}>
                         {bookmark.displayName || bookmark.name}
                       </option>
                     ))}
@@ -3774,10 +3212,7 @@ export const PersonalizedEditableReport: React.FC<
                 {bookmarkProfiles.length > 0 && (
                   <optgroup label="Captured and synced personal views (Power BI state)">
                     {bookmarkProfiles.map((bookmark) => (
-                      <option
-                        key={`saved_${bookmark.id}`}
-                        value={toSavedBookmarkSelectionId(bookmark.id)}
-                      >
+                      <option key={`saved_${bookmark.id}`} value={toSavedBookmarkSelectionId(bookmark.id)}>
                         {bookmark.name}
                       </option>
                     ))}
@@ -3831,37 +3266,19 @@ export const PersonalizedEditableReport: React.FC<
 
         <div className="toolbar-row toolbar-meta">
           <label className="auto-save-toggle">
-            <input
-              type="checkbox"
-              checked={autoSaveEnabled}
-              onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-            />
+            <input type="checkbox" checked={autoSaveEnabled} onChange={(e) => setAutoSaveEnabled(e.target.checked)} />
             Auto-save personal view
           </label>
 
-          {saveStatus === "saving" && (
-            <span className="save-status saving">💾 Saving personalization...</span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="save-status saved">✓ Personalization saved</span>
-          )}
-          {saveStatus === "error" && (
-            <span className="save-status error">✗ Save failed</span>
-          )}
+          {saveStatus === "saving" && <span className="save-status saving">💾 Saving personalization...</span>}
+          {saveStatus === "saved" && <span className="save-status saved">✓ Personalization saved</span>}
+          {saveStatus === "error" && <span className="save-status error">✗ Save failed</span>}
 
-          {lastSaved && (
-            <span className="last-saved">
-              Last saved: {lastSaved.toLocaleTimeString()}
-            </span>
-          )}
+          {lastSaved && <span className="last-saved">Last saved: {lastSaved.toLocaleTimeString()}</span>}
 
-          {bookmarkStatus && (
-            <span className="bookmark-status">{bookmarkStatus}</span>
-          )}
+          {bookmarkStatus && <span className="bookmark-status">{bookmarkStatus}</span>}
 
-          {quickVisualStatus && (
-            <span className="quick-visual-status">{quickVisualStatus}</span>
-          )}
+          {quickVisualStatus && <span className="quick-visual-status">{quickVisualStatus}</span>}
         </div>
       </div>
 
@@ -3901,19 +3318,9 @@ export const PersonalizedEditableReport: React.FC<
       )}
 
       {isQuickVisualModalOpen && (
-        <div
-          className="quick-visual-modal-backdrop"
-          onClick={closeQuickVisualModal}
-        >
-          <div
-            className="quick-visual-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>
-              {quickVisualMode === "change"
-                ? "Change Existing Visual"
-                : "Create Quick Visual"}
-            </h3>
+        <div className="quick-visual-modal-backdrop" onClick={closeQuickVisualModal}>
+          <div className="quick-visual-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{quickVisualMode === "change" ? "Change Existing Visual" : "Create Quick Visual"}</h3>
             <p>
               {quickVisualMode === "change"
                 ? "Update visual type and formatting for an existing visual."
@@ -3928,22 +3335,12 @@ export const PersonalizedEditableReport: React.FC<
                     value={quickVisualTargetVisualName}
                     onChange={(e) => {
                       const nextVisualName = e.target.value;
-                      const nextVisual = quickVisualTargets.find(
-                        (visual) => visual.name === nextVisualName
-                      );
+                      const nextVisual = quickVisualTargets.find((visual) => visual.name === nextVisualName);
                       const nextVisualType =
-                        nextVisual?.type &&
-                        QUICK_VISUAL_OPTIONS.some(
-                          (option) => option.name === nextVisual.type
-                        )
-                          ? nextVisual.type
-                          : quickVisualType;
+                        nextVisual?.type && QUICK_VISUAL_OPTIONS.some((option) => option.name === nextVisual.type) ? nextVisual.type : quickVisualType;
 
                       setQuickVisualTargetVisualName(nextVisualName);
-                      if (
-                        nextVisual?.type &&
-                        QUICK_VISUAL_OPTIONS.some((option) => option.name === nextVisual.type)
-                      ) {
+                      if (nextVisual?.type && QUICK_VISUAL_OPTIONS.some((option) => option.name === nextVisual.type)) {
                         const option = getQuickVisualOption(nextVisualType);
                         setQuickVisualType(nextVisualType);
                         setQuickVisualShowLegend(option.properties.includes("legend"));
@@ -3951,10 +3348,7 @@ export const PersonalizedEditableReport: React.FC<
                         setQuickVisualShowYAxis(option.properties.includes("yAxis"));
                       }
 
-                      void syncQuickVisualSelectionsFromVisual(
-                        nextVisualName,
-                        nextVisualType
-                      );
+                      void syncQuickVisualSelectionsFromVisual(nextVisualName, nextVisualType);
                     }}
                   >
                     {quickVisualTargets.map((visual) => (
@@ -4020,9 +3414,7 @@ export const PersonalizedEditableReport: React.FC<
               ))}
 
               {quickVisualFieldOptions.length === 0 && (
-                <div className="quick-visual-empty-fields full-width">
-                  No data fields are available for this report in the current context.
-                </div>
+                <div className="quick-visual-empty-fields full-width">No data fields are available for this report in the current context.</div>
               )}
 
               <label className="quick-visual-field full-width">
@@ -4037,10 +3429,7 @@ export const PersonalizedEditableReport: React.FC<
 
               <div className="quick-visual-field">
                 <span>Title alignment</span>
-                <select
-                  value={quickVisualTitleAlign}
-                  onChange={(e) => setQuickVisualTitleAlign(e.target.value)}
-                >
+                <select value={quickVisualTitleAlign} onChange={(e) => setQuickVisualTitleAlign(e.target.value)}>
                   <option value="left">Left</option>
                   <option value="center">Center</option>
                   <option value="right">Right</option>
@@ -4050,11 +3439,7 @@ export const PersonalizedEditableReport: React.FC<
 
             <div className="quick-visual-toggles">
               <label>
-                <input
-                  type="checkbox"
-                  checked={quickVisualShowTitle}
-                  onChange={(e) => setQuickVisualShowTitle(e.target.checked)}
-                />
+                <input type="checkbox" checked={quickVisualShowTitle} onChange={(e) => setQuickVisualShowTitle(e.target.checked)} />
                 Show title
               </label>
 
@@ -4069,32 +3454,18 @@ export const PersonalizedEditableReport: React.FC<
               </label>
 
               <label className={!showXAxisToggle ? "disabled" : ""}>
-                <input
-                  type="checkbox"
-                  checked={quickVisualShowXAxis}
-                  disabled={!showXAxisToggle}
-                  onChange={(e) => setQuickVisualShowXAxis(e.target.checked)}
-                />
+                <input type="checkbox" checked={quickVisualShowXAxis} disabled={!showXAxisToggle} onChange={(e) => setQuickVisualShowXAxis(e.target.checked)} />
                 Show X axis
               </label>
 
               <label className={!showYAxisToggle ? "disabled" : ""}>
-                <input
-                  type="checkbox"
-                  checked={quickVisualShowYAxis}
-                  disabled={!showYAxisToggle}
-                  onChange={(e) => setQuickVisualShowYAxis(e.target.checked)}
-                />
+                <input type="checkbox" checked={quickVisualShowYAxis} disabled={!showYAxisToggle} onChange={(e) => setQuickVisualShowYAxis(e.target.checked)} />
                 Show Y axis
               </label>
             </div>
 
             <div className="quick-visual-modal-actions">
-              <button
-                className="btn btn-modal-cancel"
-                onClick={closeQuickVisualModal}
-                disabled={isQuickVisualApplying}
-              >
+              <button className="btn btn-modal-cancel" onClick={closeQuickVisualModal} disabled={isQuickVisualApplying}>
                 Cancel
               </button>
               <button
@@ -4104,11 +3475,7 @@ export const PersonalizedEditableReport: React.FC<
                 }}
                 disabled={isQuickVisualApplying || !canApplyQuickVisual}
               >
-                {isQuickVisualApplying
-                  ? "Applying..."
-                  : quickVisualMode === "change"
-                    ? "Update Visual"
-                    : "Create Visual"}
+                {isQuickVisualApplying ? "Applying..." : quickVisualMode === "change" ? "Update Visual" : "Create Visual"}
               </button>
             </div>
           </div>
@@ -4119,9 +3486,7 @@ export const PersonalizedEditableReport: React.FC<
         <div className="bookmark-modal-backdrop" onClick={closeSaveBookmarkModal}>
           <div className="bookmark-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Save Personal View</h3>
-            <p>
-              Save the current filters, page, and visual state as a bookmark.
-            </p>
+            <p>Save the current filters, page, and visual state as a bookmark.</p>
 
             <input
               type="text"
@@ -4142,11 +3507,7 @@ export const PersonalizedEditableReport: React.FC<
             />
 
             <div className="bookmark-modal-actions">
-              <button
-                className="btn btn-modal-cancel"
-                onClick={closeSaveBookmarkModal}
-                disabled={isSavingBookmark}
-              >
+              <button className="btn btn-modal-cancel" onClick={closeSaveBookmarkModal} disabled={isSavingBookmark}>
                 Cancel
               </button>
               <button
@@ -4171,4 +3532,3 @@ export const PersonalizedEditableReport: React.FC<
     </div>
   );
 };
-

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { models } from "powerbi-client";
 import "./LayoutCustomizer.css";
@@ -54,39 +55,43 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
   }, [report]);
 
   // Expose layout state via ref for bookmark save/load
-  useImperativeHandle(ref, () => ({
-    getLayoutState: (): LayoutState => ({
-      selectedVisuals: visuals.filter((v) => v.checked).map((v) => v.name),
-      columns,
-      spanType,
-      isCustomLayoutActive,
-    }),
-    setLayoutState: (state: LayoutState) => {
-      if (!state) return;
-      setColumns(state.columns ?? 2);
-      setSpanType(state.spanType ?? SPAN_TYPE.NONE);
-      setIsCustomLayoutActive(!!state.isCustomLayoutActive);
-      if (Array.isArray(state.selectedVisuals)) {
-        setVisuals((prev) =>
-          prev.map((v) => ({
-            ...v,
-            checked: state.selectedVisuals.includes(v.name),
-          }))
-        );
-      }
-      // If not custom, explicitly restore default
-      if (!state.isCustomLayoutActive) {
+  useImperativeHandle(
+    ref,
+    () => ({
+      getLayoutState: (): LayoutState => ({
+        selectedVisuals: visuals.filter((v) => v.checked).map((v) => v.name),
+        columns,
+        spanType,
+        isCustomLayoutActive,
+      }),
+      setLayoutState: (state: LayoutState) => {
+        if (!state) return;
+        setColumns(state.columns ?? 2);
+        setSpanType(state.spanType ?? SPAN_TYPE.NONE);
+        setIsCustomLayoutActive(!!state.isCustomLayoutActive);
+        if (Array.isArray(state.selectedVisuals)) {
+          setVisuals((prev) =>
+            prev.map((v) => ({
+              ...v,
+              checked: state.selectedVisuals.includes(v.name),
+            })),
+          );
+        }
+        // If not custom, explicitly restore default
+        if (!state.isCustomLayoutActive) {
+          void restoreDefaultLayout();
+        }
+      },
+      resetToDefault: () => {
+        setColumns(2);
+        setSpanType(SPAN_TYPE.NONE);
+        setIsCustomLayoutActive(false);
+        setVisuals((prev) => prev.map((v) => ({ ...v, checked: true })));
         void restoreDefaultLayout();
-      }
-    },
-    resetToDefault: () => {
-      setColumns(2);
-      setSpanType(SPAN_TYPE.NONE);
-      setIsCustomLayoutActive(false);
-      setVisuals((prev) => prev.map((v) => ({ ...v, checked: true })));
-      void restoreDefaultLayout();
-    },
-  }), [visuals, columns, spanType, isCustomLayoutActive, restoreDefaultLayout]);
+      },
+    }),
+    [visuals, columns, spanType, isCustomLayoutActive, restoreDefaultLayout],
+  );
 
   // Fetch visuals from the active page
   useEffect(() => {
@@ -162,15 +167,11 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
         visualsLayout[element.name] = {
           x,
           y,
-          width: (idx % visualsPerSection === visualsPerSection - 1)
-            ? visualWidth * 2 + LAYOUT_SHOWCASE.MARGIN
-            : visualWidth,
+          width: idx % visualsPerSection === visualsPerSection - 1 ? visualWidth * 2 + LAYOUT_SHOWCASE.MARGIN : visualWidth,
           height: visualHeight,
           displayState: { mode: models.VisualContainerDisplayMode.Visible },
         };
-        x += LAYOUT_SHOWCASE.MARGIN + ((idx % visualsPerSection === visualsPerSection - 1)
-          ? visualWidth * 2
-          : visualWidth);
+        x += LAYOUT_SHOWCASE.MARGIN + (idx % visualsPerSection === visualsPerSection - 1 ? visualWidth * 2 : visualWidth);
         if (x + visualWidth > containerWidth) {
           x = LAYOUT_SHOWCASE.MARGIN;
           y += visualHeight + LAYOUT_SHOWCASE.MARGIN;
@@ -188,19 +189,13 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
           x,
           y,
           width: visualWidth,
-          height: !(idx % visualsPerSection)
-            ? visualHeight * 2 + LAYOUT_SHOWCASE.MARGIN
-            : visualHeight,
+          height: !(idx % visualsPerSection) ? visualHeight * 2 + LAYOUT_SHOWCASE.MARGIN : visualHeight,
           displayState: { mode: models.VisualContainerDisplayMode.Visible },
         };
         x += visualWidth + LAYOUT_SHOWCASE.MARGIN;
         if (x + visualWidth > containerWidth) {
-          x = ((idx + 1) % visualsPerSection === 0)
-            ? LAYOUT_SHOWCASE.MARGIN
-            : 2 * LAYOUT_SHOWCASE.MARGIN + visualWidth;
-          y += (idx % visualsPerSection === 0)
-            ? visualHeight * 2 + LAYOUT_SHOWCASE.MARGIN
-            : visualHeight + LAYOUT_SHOWCASE.MARGIN;
+          x = (idx + 1) % visualsPerSection === 0 ? LAYOUT_SHOWCASE.MARGIN : 2 * LAYOUT_SHOWCASE.MARGIN + visualWidth;
+          y += idx % visualsPerSection === 0 ? visualHeight * 2 + LAYOUT_SHOWCASE.MARGIN : visualHeight + LAYOUT_SHOWCASE.MARGIN;
         }
       });
     } else {
@@ -262,9 +257,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
   }, [renderVisuals]);
 
   const toggleVisual = (name: string) => {
-    setVisuals((prev) =>
-      prev.map((v) => (v.name === name ? { ...v, checked: !v.checked } : v))
-    );
+    setVisuals((prev) => prev.map((v) => (v.name === name ? { ...v, checked: !v.checked } : v)));
   };
 
   const selectLayout = (cols: number, span: number) => {
@@ -287,7 +280,9 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
           .filter((v: any) => v.title !== undefined && v.title !== "")
           .map((v: any) => ({ name: v.name, title: v.title, checked: true }));
         setVisuals(items);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -306,7 +301,10 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
       <div className="lc-dropdown-wrapper">
         <button
           className="lc-btn"
-          onClick={() => { setShowVisuals(!showVisuals); setShowLayouts(false); }}
+          onClick={() => {
+            setShowVisuals(!showVisuals);
+            setShowLayouts(false);
+          }}
         >
           Choose Visuals ▾
         </button>
@@ -317,11 +315,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
             ) : (
               visuals.map((v) => (
                 <label key={v.name} className="lc-checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={v.checked}
-                    onChange={() => toggleVisual(v.name)}
-                  />
+                  <input type="checkbox" checked={v.checked} onChange={() => toggleVisual(v.name)} />
                   <span className="lc-visual-title">{v.title}</span>
                 </label>
               ))
@@ -334,7 +328,10 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
       <div className="lc-dropdown-wrapper">
         <button
           className="lc-btn"
-          onClick={() => { setShowLayouts(!showLayouts); setShowVisuals(false); }}
+          onClick={() => {
+            setShowLayouts(!showLayouts);
+            setShowVisuals(false);
+          }}
         >
           Layout: {layoutLabel()} ▾
         </button>
