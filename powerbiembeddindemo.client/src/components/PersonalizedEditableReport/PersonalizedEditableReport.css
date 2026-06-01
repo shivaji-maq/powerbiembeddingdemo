@@ -52,6 +52,112 @@
   justify-content: flex-end;
 }
 
+.theme-controls {
+  position: relative;
+}
+
+.theme-picker {
+  position: relative;
+}
+
+.btn-theme-picker {
+  background: #fefefe;
+  color: #26384f;
+  border: 1px solid #b9c8de;
+}
+
+.btn-theme-picker:hover:not(:disabled) {
+  background: #eef5ff;
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 180;
+  width: 310px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #c8d4e2;
+  border-radius: 8px;
+  box-shadow: 0 14px 32px rgba(11, 30, 55, 0.22);
+}
+
+.theme-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  color: #26384f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.theme-mode-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.theme-menu-separator {
+  height: 1px;
+  margin: 6px 0;
+  background: #e4eaf2;
+}
+
+.theme-option {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 14px 78px 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #22344a;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.theme-option:hover,
+.theme-option.active {
+  background: #eef5ff;
+}
+
+.theme-option-radio {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #758aa5;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.theme-option.active .theme-option-radio {
+  border: 3px solid #1976d2;
+}
+
+.theme-option-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-option-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.theme-option-swatch {
+  height: 16px;
+  border-radius: 2px;
+}
+
 .bookmark-select {
   height: 32px;
   min-width: 200px;
@@ -164,6 +270,16 @@
   color: #3e2600;
   background: rgba(255, 248, 220, 0.92);
   border: 1px solid #e2cb91;
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.theme-status {
+  font-size: 12px;
+  color: #234d35;
+  background: rgba(236, 249, 240, 0.96);
+  border: 1px solid #a7d8b7;
   border-radius: 4px;
   padding: 4px 8px;
   white-space: nowrap;
@@ -541,10 +657,22 @@
   .toolbar-cluster,
   .primary-actions,
   .bookmark-controls,
+  .theme-controls,
   .edit-actions,
   .toolbar-meta {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .theme-picker,
+  .btn-theme-picker {
+    width: 100%;
+  }
+
+  .theme-menu {
+    left: 0;
+    right: auto;
+    width: min(310px, calc(100vw - 48px));
   }
 
   .bookmark-controls {

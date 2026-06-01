@@ -9,6 +9,7 @@ const EmbedReport: React.FC<EmbedReportProps> = ({
   pageId,
   embedReportEventHandlers,
   reportSettings,
+  themeJson,
   reportCssClassName,
   accessToken,
   tokenType,
@@ -26,6 +27,7 @@ const EmbedReport: React.FC<EmbedReportProps> = ({
 
   if (pageId) embedConfig.pageName = pageId;
   if (reportSettings) embedConfig.settings = reportSettings;
+  if (themeJson) embedConfig.theme = { themeJson };
   return (
     <PowerBIEmbed
       embedConfig={embedConfig}

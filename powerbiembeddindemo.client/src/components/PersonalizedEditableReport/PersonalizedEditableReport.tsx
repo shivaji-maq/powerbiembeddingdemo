@@ -5,6 +5,11 @@ import EmbedReport from "../EmbeddedReport/EmbeddedReport";
 import { ReportEditor } from "../ReportEditor/ReportEditor";
 import { usePersonalization } from "../../hooks/usePersonalization";
 import { applyPersonalizedFilters, getReportPersonalizationState} from "../../lib/powerbiLib/personalization";
+import {
+  buildReportTheme,
+  reportColorThemes,
+  type ReportThemeMode,
+} from "../../lib/powerbiLib/reportThemes";
 // @ts-ignore -- CSS side-effect imports are handled by Vite at runtime.
 import "./PersonalizedEditableReport.css";
 
@@ -36,6 +41,12 @@ interface BookmarkProfile {
   createdAt: string;
   updatedAt: string;
   layoutState?: any;
+  theme?: BookmarkThemeState;
+}
+
+interface BookmarkThemeState {
+  name: string;
+  mode: ReportThemeMode;
 }
 
 const SAVED_BOOKMARK_PREFIX = "saved:";
@@ -477,6 +488,29 @@ const parseSafeDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const normalizeBookmarkTheme = (value: any): BookmarkThemeState | undefined => {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const requestedThemeName =
+    typeof value.name === "string" ? value.name : value.themeName;
+  const themeName = reportColorThemes.some(
+    (theme) => theme.name === requestedThemeName
+  )
+    ? requestedThemeName
+    : reportColorThemes[0].name;
+
+  const requestedMode =
+    typeof value.mode === "string" ? value.mode : value.themeMode;
+  const mode: ReportThemeMode = requestedMode === "dark" ? "dark" : "light";
+
+  return {
+    name: themeName,
+    mode,
+  };
+};
+
 const flattenReportBookmarks = (
   bookmarks: models.IReportBookmark[]
 ): models.IReportBookmark[] => {
@@ -638,6 +672,7 @@ const toNormalizedBookmarkProfile = (bookmark: any): BookmarkProfile | null => {
     name: bookmarkName,
     state: bookmarkState,
     bookmarkStateJson: bookmarkState,
+    theme: normalizeBookmarkTheme(bookmark.theme),
     createdAt:
       typeof bookmark.createdAt === "string"
         ? bookmark.createdAt
@@ -752,6 +787,12 @@ export const PersonalizedEditableReport: React.FC<
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [isReportLoaded, setIsReportLoaded] = useState(false);
+  const [selectedThemeName, setSelectedThemeName] = useState(
+    reportColorThemes[0].name
+  );
+  const [themeMode, setThemeMode] = useState<ReportThemeMode>("light");
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const [themeStatus, setThemeStatus] = useState("");
   const [isAuthoringReportLoaded, setIsAuthoringReportLoaded] = useState(false);
   const [authoringEmbedError, setAuthoringEmbedError] = useState<string | null>(
     null
@@ -1119,6 +1160,10 @@ export const PersonalizedEditableReport: React.FC<
     setQuickVisualShowXAxis(true);
     setQuickVisualShowYAxis(true);
     setQuickVisualStatus(null);
+    setSelectedThemeName(reportColorThemes[0].name);
+    setThemeMode("light");
+    setThemeStatus("");
+    setIsThemeMenuOpen(false);
     setAutoSaveRevision(0);
     setCurrentPage("");
   }, [reportId, userId]);
@@ -1170,13 +1215,52 @@ export const PersonalizedEditableReport: React.FC<
     [bookmarksStorageKey]
   );
 
+  const activeReportThemeJson = useMemo(
+    () => buildReportTheme(selectedThemeName, themeMode),
+    [selectedThemeName, themeMode]
+  );
+
+  const applyReportTheme = useCallback(
+    async (
+      nextThemeName: string,
+      nextThemeMode: ReportThemeMode,
+      showStatus = true
+    ) => {
+      const nextThemeJson = buildReportTheme(nextThemeName, nextThemeMode);
+      setSelectedThemeName(nextThemeName);
+      setThemeMode(nextThemeMode);
+
+      if (!isReportLoaded || !reportRef.current?.applyTheme) {
+        return;
+      }
+
+      try {
+        await reportRef.current.applyTheme({ themeJson: nextThemeJson });
+        if (authoringReportRef.current?.applyTheme) {
+          await authoringReportRef.current.applyTheme({
+            themeJson: nextThemeJson,
+          });
+        }
+        if (showStatus) {
+          setThemeStatus(`Applied ${nextThemeName} ${nextThemeMode} theme`);
+          window.setTimeout(() => setThemeStatus(""), 1600);
+        }
+      } catch (error) {
+        console.error("Unable to apply report theme", error);
+        setThemeStatus("Theme update failed");
+      }
+    },
+    [isReportLoaded, reportRef]
+  );
+
   const upsertCapturedBookmark = useCallback(
     (
       bookmarkName: string,
       bookmarkStateJson: string,
       selectAfterUpsert = false,
       mode: CapturedBookmarkUpsertMode = "syncApplied",
-      layoutState?: any
+      layoutState?: any,
+      theme?: BookmarkThemeState
     ) => {
       if (!bookmarkStateJson) {
         return null;
@@ -1231,6 +1315,7 @@ export const PersonalizedEditableReport: React.FC<
         createdAt: existingBookmark?.createdAt || now,
         updatedAt: now,
         layoutState: layoutState ?? existingBookmark?.layoutState,
+        theme: theme ?? existingBookmark?.theme,
       };
 
       const nextBookmarks = [
@@ -1301,11 +1386,16 @@ export const PersonalizedEditableReport: React.FC<
         if (safeLastSaved) {
           setLastSaved(safeLastSaved);
         }
+
+        const bookmarkTheme = normalizeBookmarkTheme(bookmark.theme);
+        if (bookmarkTheme) {
+          await applyReportTheme(bookmarkTheme.name, bookmarkTheme.mode, false);
+        }
       } catch (error) {
         console.error("Error applying bookmark profile:", error);
       }
     },
-    [reportRef]
+    [applyReportTheme, reportRef]
   );
 
   const runWhenReportReady = useCallback(
@@ -1482,6 +1572,7 @@ export const PersonalizedEditableReport: React.FC<
                 typeof parsedSettings === "string"
                   ? parsedSettings
                   : parsedSettings?.bookmarkState;
+              const savedTheme = normalizeBookmarkTheme(parsedSettings?.theme);
 
               if (bookmarkStateFromSettings) {
                 await runWhenReportReady(async () => {
@@ -1491,6 +1582,10 @@ export const PersonalizedEditableReport: React.FC<
                   return true;
                 });
                 appliedSavedState = true;
+              }
+
+              if (savedTheme) {
+                await applyReportTheme(savedTheme.name, savedTheme.mode, false);
               }
             } catch (stateError) {
               console.warn("Failed applying saved bookmark state", stateError);
@@ -1644,6 +1739,7 @@ export const PersonalizedEditableReport: React.FC<
     getPersonalization,
     bookmarksStorageKey,
     applyBookmarkProfile,
+    applyReportTheme,
     runWhenReportReady,
     selectedBookmarkStorageKey,
     showBookmarkStatus,
@@ -1680,9 +1776,13 @@ export const PersonalizedEditableReport: React.FC<
       settingsJson: JSON.stringify({
         schemaVersion: 1,
         bookmarkState,
+        theme: {
+          name: selectedThemeName,
+          mode: themeMode,
+        },
       }),
     };
-  }, [reportRef, userId, reportId, workspaceId]);
+  }, [reportRef, userId, reportId, workspaceId, selectedThemeName, themeMode]);
 
   useEffect(() => {
     getCurrentPersonalizationPayloadRef.current = getCurrentPersonalizationPayload;
@@ -3199,7 +3299,11 @@ export const PersonalizedEditableReport: React.FC<
         bookmarkStateJson,
         false,
         "saveView",
-        layoutState
+        layoutState,
+        {
+          name: selectedThemeName,
+          mode: themeMode,
+        }
       );
       if (!nextBookmark) {
         throw new Error("Unable to save captured bookmark state.");
@@ -3238,6 +3342,8 @@ export const PersonalizedEditableReport: React.FC<
         showBookmarkStatus("Unable to restore original report view right now.");
         return;
       }
+
+      await applyReportTheme(reportColorThemes[0].name, "light", false);
 
       // Reset layout customizer to default (all visuals selected, default layout)
       if (layoutCustomizerRef?.current?.resetToDefault) {
@@ -3508,7 +3614,12 @@ export const PersonalizedEditableReport: React.FC<
                 resolvedBookmarkName,
                 bookmarkStateJson,
                 true,
-                "syncApplied"
+                "syncApplied",
+                undefined,
+                {
+                  name: selectedThemeName,
+                  mode: themeMode,
+                }
               );
               if (syncedBookmark) {
                 showBookmarkStatus(`Synced bookmark "${syncedBookmark.name}"`);
@@ -3587,6 +3698,8 @@ export const PersonalizedEditableReport: React.FC<
       openQuickVisualModal,
       isReportLoaded,
       captureOriginalReportStateIfMissing,
+      selectedThemeName,
+      themeMode,
     ]
   );
 
@@ -3811,6 +3924,69 @@ export const PersonalizedEditableReport: React.FC<
             </div>
           </div>
 
+          <div className="toolbar-cluster theme-controls">
+            <div className="theme-picker">
+              <button
+                type="button"
+                className="btn btn-theme-picker"
+                onClick={() => setIsThemeMenuOpen((isOpen) => !isOpen)}
+                aria-expanded={isThemeMenuOpen}
+                aria-haspopup="menu"
+              >
+                Choose theme
+              </button>
+
+              {isThemeMenuOpen && (
+                <div className="theme-menu" role="menu">
+                  <label className="theme-mode-toggle">
+                    <span>Dark mode</span>
+                    <input
+                      type="checkbox"
+                      checked={themeMode === "dark"}
+                      onChange={(event) => {
+                        void applyReportTheme(
+                          selectedThemeName,
+                          event.target.checked ? "dark" : "light"
+                        );
+                        triggerAutoSaveRevision();
+                      }}
+                    />
+                  </label>
+
+                  <div className="theme-menu-separator" />
+
+                  {reportColorThemes.map((theme) => (
+                    <button
+                      key={theme.name}
+                      type="button"
+                      className={`theme-option${
+                        selectedThemeName === theme.name ? " active" : ""
+                      }`}
+                      role="menuitemradio"
+                      aria-checked={selectedThemeName === theme.name}
+                      onClick={() => {
+                        void applyReportTheme(theme.name, themeMode);
+                        triggerAutoSaveRevision();
+                      }}
+                    >
+                      <span className="theme-option-radio" />
+                      <span className="theme-option-name">{theme.name}</span>
+                      <span className="theme-option-swatches" aria-hidden="true">
+                        {theme.dataColors.map((color) => (
+                          <span
+                            key={`${theme.name}_${color}`}
+                            className="theme-option-swatch"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="toolbar-cluster edit-actions">
             {toggleButton}
             <ReportEditor
@@ -3862,6 +4038,10 @@ export const PersonalizedEditableReport: React.FC<
           {quickVisualStatus && (
             <span className="quick-visual-status">{quickVisualStatus}</span>
           )}
+
+          {themeStatus && (
+            <span className="theme-status">{themeStatus}</span>
+          )}
         </div>
       </div>
 
@@ -3878,6 +4058,7 @@ export const PersonalizedEditableReport: React.FC<
           embedUrl={embedUrl}
           embedReportEventHandlers={mergedEmbedReportEventHandlers}
           reportSettings={reportSettings}
+          themeJson={activeReportThemeJson}
           accessToken={accessToken}
           tokenType={tokenType}
           onReportLoadReportAttachmentFunction={handleReportLoadAttachment}
@@ -3892,6 +4073,7 @@ export const PersonalizedEditableReport: React.FC<
             embedUrl={embedUrl}
             embedReportEventHandlers={authoringEmbedReportEventHandlers}
             reportSettings={reportSettings}
+            themeJson={activeReportThemeJson}
             reportCssClassName="authoring-report-embed"
             accessToken={accessToken}
             tokenType={tokenType}
