@@ -46,6 +46,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
   const [pendingLayoutState, setPendingLayoutState] = useState<LayoutState | null>(null);
   const [layoutRenderTrigger, setLayoutRenderTrigger] = useState(0); // Trigger for forced layout render
   const [currentPageName, setCurrentPageName] = useState<string | undefined>(undefined); // Track current page for comparison
+  const [previousSelections, setPreviousSelections] = useState<Set<string>>(new Set()); // Preserve visual selections across page reloads
 
   const restoreDefaultLayout = useCallback(async () => {
     if (!report) return;
@@ -71,6 +72,10 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
       }),
       setLayoutState: (state: LayoutState) => {
         if (!state) return;
+        // Preserve visual selections from the bookmark
+        if (Array.isArray(state.selectedVisuals)) {
+          setPreviousSelections(new Set(state.selectedVisuals));
+        }
         // Set pending state which will trigger effect to apply layout
         setPendingLayoutState(state);
       },
@@ -79,6 +84,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
         setSpanType(SPAN_TYPE.NONE);
         setIsCustomLayoutActive(false);
         setVisuals((prev) => prev.map((v) => ({ ...v, checked: true })));
+        setPreviousSelections(new Set());
         void restoreDefaultLayout();
       },
     }),
@@ -94,7 +100,12 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
       const pageVisuals = await page.getVisuals();
       const items: VisualItem[] = pageVisuals
         .filter((v: any) => v.name && v.title !== undefined && v.title !== "")
-        .map((v: any) => ({ name: v.name, title: v.title, checked: true }));
+        .map((v: any) => ({ 
+          name: v.name, 
+          title: v.title, 
+          // Restore previous selection if it was previously set, otherwise default to true
+          checked: previousSelections.size === 0 || previousSelections.has(v.name) ? true : false
+        }));
       setVisuals(items);
       return items;
     } catch (e) {
@@ -102,19 +113,20 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
       setVisuals([]);
       return [] as VisualItem[];
     }
-  }, [page]);
+  }, [page, previousSelections]);
 
   // Fetch visuals from the active page
   useEffect(() => {
     if (!page) return;
-    setShowVisuals(false);
-    setShowLayouts(false);
     
-    // Only reset layout if it's a DIFFERENT page (by page name)
+    // Only reset dropdown and layout if it's a DIFFERENT page (by page name)
     // If the page name is the same but the reference changed (e.g., after theme application),
-    // preserve the current layout state
+    // preserve the current layout state and visual selections
     if (page.name !== currentPageName) {
+      setShowVisuals(false);
+      setShowLayouts(false);
       setIsCustomLayoutActive(false);
+      setPreviousSelections(new Set()); // Reset selections when switching pages
     }
     
     // Update current page name
@@ -151,6 +163,8 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
           checked: selectedNames.has(v.name),
         })),
       );
+      // Update previousSelections to match the applied selections
+      setPreviousSelections(selectedNames);
       visualsApplied = true;
     }
 
@@ -322,7 +336,13 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
   }, [columns, spanType, isCustomLayoutActive, visuals, page, report, layoutRenderTrigger, renderVisuals]);
 
   const toggleVisual = (name: string) => {
-    setVisuals((prev) => prev.map((v) => (v.name === name ? { ...v, checked: !v.checked } : v)));
+    setVisuals((prev) => {
+      const updated = prev.map((v) => (v.name === name ? { ...v, checked: !v.checked } : v));
+      // Update previous selections to preserve across page reloads
+      const selectedNames = new Set(updated.filter(v => v.checked).map(v => v.name));
+      setPreviousSelections(selectedNames);
+      return updated;
+    });
   };
 
   const selectLayout = (cols: number, span: number) => {
@@ -336,6 +356,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
     setIsCustomLayoutActive(false);
     setShowLayouts(false);
     setVisuals((prev) => prev.map((v) => ({ ...v, checked: true })));
+    setPreviousSelections(new Set()); // Clear previous selections when resetting to default
     await restoreDefaultLayout();
     // Re-fetch visuals after reload to ensure state is fresh
     await fetchPageVisuals();
@@ -364,13 +385,45 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
           Choose Visuals ▾
         </button>
         {showVisuals && (
-          <div className="lc-dropdown">
+          <div 
+            className="lc-dropdown"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             {visuals.length === 0 ? (
               <div className="lc-dropdown-empty">No visuals found</div>
             ) : (
               visuals.map((v) => (
-                <label key={v.name} className="lc-checkbox-item">
-                  <input type="checkbox" checked={v.checked} onChange={() => toggleVisual(v.name)} />
+                <label 
+                  key={v.name} 
+                  className="lc-checkbox-item"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={v.checked} 
+                    onChange={() => toggleVisual(v.name)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                  />
                   <span className="lc-visual-title">{v.title}</span>
                 </label>
               ))
@@ -391,23 +444,94 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
           Layout: {layoutLabel()} ▾
         </button>
         {showLayouts && (
-          <div className="lc-dropdown lc-layout-dropdown">
-            <button className="lc-layout-option" onClick={chooseDefaultLayout}>
+          <div 
+            className="lc-dropdown lc-layout-dropdown"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                chooseDefaultLayout();
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▣</span> Power BI default
             </button>
-            <button className="lc-layout-option" onClick={() => selectLayout(1, SPAN_TYPE.NONE)}>
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectLayout(1, SPAN_TYPE.NONE);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▮</span> 1 Column
             </button>
-            <button className="lc-layout-option" onClick={() => selectLayout(2, SPAN_TYPE.NONE)}>
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectLayout(2, SPAN_TYPE.NONE);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▮▮</span> 2 Columns
             </button>
-            <button className="lc-layout-option" onClick={() => selectLayout(2, SPAN_TYPE.COLSPAN)}>
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectLayout(2, SPAN_TYPE.COLSPAN);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▮▯</span> 2 Col (Colspan)
             </button>
-            <button className="lc-layout-option" onClick={() => selectLayout(2, SPAN_TYPE.ROWSPAN)}>
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectLayout(2, SPAN_TYPE.ROWSPAN);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▯▮</span> 2 Col (Rowspan)
             </button>
-            <button className="lc-layout-option" onClick={() => selectLayout(3, SPAN_TYPE.NONE)}>
+            <button 
+              className="lc-layout-option" 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                selectLayout(3, SPAN_TYPE.NONE);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
               <span className="lc-layout-icon">▮▮▮</span> 3 Columns
             </button>
           </div>

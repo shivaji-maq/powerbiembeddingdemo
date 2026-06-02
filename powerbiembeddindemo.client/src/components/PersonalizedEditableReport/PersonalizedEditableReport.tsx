@@ -1610,6 +1610,19 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     restoreOriginalReportState,
   ]);
 
+  // Auto-load selected bookmark on page refresh/initial load
+  const hasAutoLoadedBookmarkRef = useRef(false);
+  useEffect(() => {
+    if (!isReportLoaded || isHydratingPersonalization || hasAutoLoadedBookmarkRef.current) {
+      return;
+    }
+
+    if (selectedBookmarkId && selectedBookmarkId !== "original:view") {
+      hasAutoLoadedBookmarkRef.current = true;
+      void loadBookmarkById(selectedBookmarkId);
+    }
+  }, [isReportLoaded, isHydratingPersonalization, selectedBookmarkId]);
+
   const getCurrentPersonalizationPayload = useCallback(async () => {
     if (!reportRef.current) {
       return null;

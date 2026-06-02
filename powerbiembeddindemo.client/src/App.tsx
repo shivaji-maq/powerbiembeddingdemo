@@ -627,15 +627,22 @@ function App() {
                             <option value="" disabled>
                               Select bookmark
                             </option>
-                            {bookmarks.map((b) => (
-                              <option key={b.id} value={b.id}>
-                                {b.name}
-                              </option>
-                            ))}
+                            <option value="original:view">Original report view</option>
+                            {bookmarks.length > 0 && (
+                              <>
+                                {bookmarks
+                                  .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                                  .map((b, idx) => (
+                                    <option key={b.id} value={b.id}>
+                                      {idx === 0 ? `Last captured view - ${b.name}` : b.name}
+                                    </option>
+                                  ))}
+                              </>
+                            )}
                           </select>
                           <button
                             title="Delete bookmark"
-                            disabled={!selectedBookmarkId}
+                            disabled={!selectedBookmarkId || selectedBookmarkId === "original:view"}
                             style={{
                               width: 34,
                               height: 34,
@@ -643,12 +650,12 @@ function App() {
                               borderRadius: 6,
                               background: "#fff",
                               color: "#e53935",
-                              cursor: selectedBookmarkId ? "pointer" : "not-allowed",
+                              cursor: selectedBookmarkId && selectedBookmarkId !== "original:view" ? "pointer" : "not-allowed",
                               fontSize: "1rem",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              opacity: selectedBookmarkId ? 1 : 0.4,
+                              opacity: selectedBookmarkId && selectedBookmarkId !== "original:view" ? 1 : 0.4,
                             }}
                             onClick={() => {
                               dispatch(removeBookmark(selectedBookmarkId));
@@ -675,8 +682,12 @@ function App() {
                               opacity: selectedBookmarkId ? 1 : 0.4,
                             }}
                             onClick={() => {
-                              const bm = bookmarks.find((b) => b.id === selectedBookmarkId);
-                              if (bm) quickVisualCreatorRef.current?.loadBookmark(bm);
+                              if (selectedBookmarkId === "original:view") {
+                                layoutCustomizerRef.current?.resetToDefault?.();
+                              } else {
+                                const bm = bookmarks.find((b) => b.id === selectedBookmarkId);
+                                if (bm) quickVisualCreatorRef.current?.loadBookmark(bm);
+                              }
                             }}
                           >
                             ↻
