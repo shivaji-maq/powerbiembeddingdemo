@@ -29,8 +29,8 @@ interface Report {
   datasetId?: string;
 }
 
-const GLOBAL_DATE_MIN = "1999-01-01";
-const GLOBAL_DATE_MAX = "2026-12-31";
+const GLOBAL_DATE_MIN = "2012-01-01";
+const GLOBAL_DATE_MAX = "2021-12-31";
 const GLOBAL_DATE_FILTER_STORAGE_KEY = "globalDateFilterRange";
 const DATE_INPUT_VALUE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
