@@ -560,7 +560,7 @@ function App() {
                 Filtering {selectedReportRaw.globalDateFilter.table}.{selectedReportRaw.globalDateFilter.column}
               </p>
             ) : (
-              <p className="global-date-filter-status">Applies to Contoso and Competitive Marketing reports.</p>
+              <p className="global-date-filter-status">Does not applies to Writeback Flow Report.</p>
             )}
             {globalDateStatus && <p className="global-date-filter-status">{globalDateStatus}</p>}
           </div>

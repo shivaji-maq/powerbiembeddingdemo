@@ -69,5 +69,9 @@ export const reportsToEmbed: ReportToEmbed[] = [
     name: "User Context Aware Store Sales",
     isSecureEmbedded: false,
     embeddingIframe: `<iframe title="User Context Aware Column Demo" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=4031228f-f9dc-4aa9-8905-f70414f59698&autoAuth=true&ctid=e4d98dd2-9199-42e5-ba8b-da3e763ede2e&language=selectLanguage" frameborder="0" allowFullScreen="true"></iframe>`,
+    globalDateFilter: {
+      table: "Time",
+      column: "Date",
+    },
   },
 ];
