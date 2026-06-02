@@ -40,6 +40,10 @@ export const reportsToEmbed: ReportToEmbed[] = [
     datasetId: "",
     name: "Artificial Intelligence Sample",
     isSecureEmbedded: false,
+    globalDateFilter: {
+      table: "Opportunity Calendar",
+      column: "Date",
+    },
   },
   {
     reportId: "f2496a3d-b253-4ab8-94d4-2f69816551cd",

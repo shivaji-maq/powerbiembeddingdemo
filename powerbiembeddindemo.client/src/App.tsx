@@ -101,7 +101,7 @@ const buildGlobalDateFilters = (target: GlobalDateFilterTarget | undefined, date
           value: toStartOfDayIso(from),
         },
         {
-          operator: "LessThanOrEqual",
+          operator: "LessThan",
           value: toEndOfDayIso(to),
         },
       ],
