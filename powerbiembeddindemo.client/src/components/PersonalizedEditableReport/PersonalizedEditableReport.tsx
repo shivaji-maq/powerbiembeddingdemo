@@ -687,6 +687,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   // FIX: Track the dedicated blank authoring page separately (showcase uses pages[1])
   const authoringPageRef = useRef<any>(null);
   const themePickerRef = useRef<HTMLDivElement | null>(null);
+  const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
   const reportRef = externalReportRef || internalReportRef;
   const customReportSettingsObject = (customReportSettings || {}) as Record<string, any>;
   const customQuickVisualFieldCatalog = Array.isArray(customReportSettingsObject.quickVisualFieldCatalog)
@@ -714,6 +715,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const [bookmarkProfiles, setBookmarkProfiles] = useState<BookmarkProfile[]>([]);
   const [reportBookmarks, setReportBookmarks] = useState<models.IReportBookmark[]>([]);
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<string>("");
+  const [isBookmarkMenuOpen, setIsBookmarkMenuOpen] = useState(false);
   const [bookmarkStatus, setBookmarkStatus] = useState<string | null>(null);
   const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
   const [bookmarkNameInput, setBookmarkNameInput] = useState("");
@@ -736,6 +738,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const [isHydratingPersonalization, setIsHydratingPersonalization] = useState(true);
   const autoSaveInFlightRef = useRef(false);
   const suppressAutoSaveEventsRef = useRef(0);
+  const bookmarkApplyInProgressRef = useRef(false);
   const hasHydratedRef = useRef(false);
   const quickVisualSessionSyncTimerRef = useRef<number | null>(null);
   const bookmarkStatusTimerRef = useRef<number | null>(null);
@@ -1106,6 +1109,25 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   }, [isThemeMenuOpen]);
 
   useEffect(() => {
+    if (!isBookmarkMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        bookmarkMenuRef.current &&
+        event.target instanceof Node &&
+        !bookmarkMenuRef.current.contains(event.target)
+      ) {
+        setIsBookmarkMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isBookmarkMenuOpen]);
+
+  useEffect(() => {
     if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization) {
       return;
     }
@@ -1232,6 +1254,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       }
 
       suppressAutoSaveEventsRef.current = 3;
+      bookmarkApplyInProgressRef.current = true;
 
       try {
         let appliedBookmarkState = false;
@@ -1275,6 +1298,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         await applyGlobalReportFilters();
       } catch (error) {
         console.error("Error applying bookmark profile:", error);
+      } finally {
+        window.setTimeout(() => {
+          bookmarkApplyInProgressRef.current = false;
+        }, 750);
       }
     },
     [applyGlobalReportFilters, applyReportTheme, reportRef]
@@ -1534,6 +1561,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           const selectedSavedBookmark = localBookmarks.find((bookmark) => bookmark.id === selectedSavedBookmarkId);
           if (selectedSavedBookmark) {
             await applyBookmarkProfile(selectedSavedBookmark);
+            // Restore layout customizer state from bookmark
+            if (selectedSavedBookmark.layoutState && layoutCustomizerRef?.current?.setLayoutState) {
+              layoutCustomizerRef.current.setLayoutState(selectedSavedBookmark.layoutState);
+            }
           }
         } else if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
           await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
@@ -1545,6 +1576,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         } else if (isOriginalReportSelection(nextSelectionId)) {
           await restoreOriginalReportState();
           await applyGlobalReportFilters();
+          // Reset layout customizer to default for original view
+          if (layoutCustomizerRef?.current?.resetToDefault) {
+            layoutCustomizerRef.current.resetToDefault();
+          }
         }
       } else {
         setSelectedBookmarkId("");
@@ -1790,7 +1825,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   }, [syncSessionQuickVisualProfilesFromPage]);
 
   useEffect(() => {
-    if (!autoSaveEnabled || !reportRef.current || autoSaveRevision === 0 || isHydratingPersonalization) {
+    if (!autoSaveEnabled || !reportRef.current || autoSaveRevision === 0 || isHydratingPersonalization || bookmarkApplyInProgressRef.current) {
       return;
     }
 
@@ -1840,6 +1875,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         !isReportLoadedRef.current ||
         !autoSaveEnabledRef.current ||
         isHydratingPersonalizationRef.current ||
+        bookmarkApplyInProgressRef.current ||
         !reportRef.current ||
         autoSaveInFlightRef.current
       ) {
@@ -1863,7 +1899,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   }, [isReportLoaded, autoSaveEnabled, reportRef, getCurrentPersonalizationPayload, savePersonalization]);
 
   const triggerAutoSaveRevision = useCallback(() => {
-    if (!isReportLoaded || isHydratingPersonalization) {
+    if (!isReportLoaded || isHydratingPersonalization || bookmarkApplyInProgressRef.current) {
       return;
     }
 
@@ -2964,6 +3000,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       return;
     }
 
+    bookmarkApplyInProgressRef.current = true;
+    suppressAutoSaveEventsRef.current = Math.max(suppressAutoSaveEventsRef.current, 5);
+
+    try {
     if (isOriginalReportSelection(bookmarkIdToLoad)) {
       const restored = await restoreOriginalReportState();
       if (!restored) {
@@ -3014,6 +3054,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     }
 
     if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
+      suppressAutoSaveEventsRef.current = Math.max(suppressAutoSaveEventsRef.current, 5);
       await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
       const selectedReportBookmark = reportBookmarks.find((bookmark) => bookmark.name === selectedReportBookmarkName);
       const bookmarkLabel = selectedReportBookmark?.displayName || selectedReportBookmarkName;
@@ -3028,6 +3069,11 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     }
 
     showBookmarkStatus("Selected bookmark was not found.");
+    } finally {
+      window.setTimeout(() => {
+        bookmarkApplyInProgressRef.current = false;
+      }, 750);
+    }
   };
 
   const handleDeleteSelectedBookmark = () => {
@@ -3068,6 +3114,18 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     }
   };
 
+  const handleBookmarkSelectionChange = (bookmarkIdToLoad: string) => {
+    if (!bookmarkIdToLoad) {
+      setSelectedBookmarkId("");
+      setIsBookmarkMenuOpen(false);
+      return;
+    }
+
+    setSelectedBookmarkId(bookmarkIdToLoad);
+    setIsBookmarkMenuOpen(false);
+    void loadBookmarkById(bookmarkIdToLoad);
+  };
+
   const handleFiltersApplied = useCallback(async () => {
     try {
       if (!reportRef.current) {
@@ -3083,18 +3141,30 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportRef]);
 
-  const handlePageChanged = useCallback((event?: any) => {
+  const handlePageChanged = useCallback(async (event?: any) => {
     try {
-      if (event?.detail?.newPage?.name) {
-        setCurrentPage(event.detail.newPage.name);
+      let nextPage = event?.detail?.newPage;
+      if (reportRef.current && typeof reportRef.current.getActivePage === "function") {
+        try {
+          const activePage = await reportRef.current.getActivePage();
+          if (activePage?.name) {
+            nextPage = activePage;
+          }
+        } catch {}
+      }
+
+      if (nextPage?.name) {
+        setCurrentPage(nextPage.name);
+        if (onReportReady && reportRef.current) {
+          onReportReady(reportRef.current, nextPage);
+        }
       }
 
       triggerAutoSaveRevision();
     } catch (error) {
       console.error("Error handling page change:", error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onReportReady, reportRef, triggerAutoSaveRevision]);
 
   const defaultEmbedReportEventHandlers: Map<string, EventHandler> = useMemo(
     () =>
@@ -3108,7 +3178,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         [
           "pageChanged",
           (event?: any) => {
-            handlePageChanged(event);
+            void handlePageChanged(event);
           },
         ],
         [
@@ -3128,6 +3198,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           "bookmarkApplied",
           async (event?: any) => {
             try {
+              if (bookmarkApplyInProgressRef.current) {
+                return;
+              }
+
               const appliedBookmarkName = getBookmarkNameFromAppliedEvent(event);
 
               const latestReportBookmarks = await loadReportBookmarks(true);
@@ -3436,6 +3510,14 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const showXAxisToggle = selectedQuickVisualOption.properties.includes("xAxis");
   const showYAxisToggle = selectedQuickVisualOption.properties.includes("yAxis");
   const selectedSavedBookmarkId = getSavedBookmarkIdFromSelection(selectedBookmarkId);
+  const selectedReportBookmarkName = getReportBookmarkNameFromSelection(selectedBookmarkId);
+  const selectedBookmarkLabel = isOriginalReportSelection(selectedBookmarkId)
+    ? "Original report view"
+    : selectedSavedBookmarkId
+      ? bookmarkProfiles.find((bookmark) => bookmark.id === selectedSavedBookmarkId)?.name || "Select bookmark"
+      : selectedReportBookmarkName
+        ? reportBookmarks.find((bookmark) => bookmark.name === selectedReportBookmarkName)?.displayName || selectedReportBookmarkName
+        : "Select bookmark";
   console.log(reportSettings);
   return (
     <div className="personalized-editable-report">
@@ -3449,44 +3531,52 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
           <div className="toolbar-cluster bookmark-controls">
             <div className="bookmark-selector-wrapper">
-              <select
-                className="bookmark-select"
-                value={selectedBookmarkId}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setSelectedBookmarkId(newValue);
-                  // Auto-load on selection
-                  if (newValue) {
-                    void loadBookmarkById(newValue);
-                  }
-                }}
-              >
-                <option value="">Select bookmark</option>
-                <option value={ORIGINAL_REPORT_SELECTION_ID}>Original report view</option>
-                {reportBookmarks.length > 0 && (
-                  <optgroup label="Power BI report bookmarks">
+              <div className="bookmark-menu-wrapper" ref={bookmarkMenuRef}>
+                <button
+                  type="button"
+                  className="bookmark-select bookmark-select-button"
+                  onClick={() => setIsBookmarkMenuOpen((isOpen) => !isOpen)}
+                  aria-haspopup="menu"
+                  aria-expanded={isBookmarkMenuOpen}
+                  title={selectedBookmarkLabel}
+                >
+                  <span>{selectedBookmarkLabel}</span>
+                </button>
+                {isBookmarkMenuOpen && (
+                  <div className="bookmark-menu" role="menu">
+                    <button type="button" className="bookmark-menu-item" onClick={() => handleBookmarkSelectionChange(ORIGINAL_REPORT_SELECTION_ID)}>
+                      Original report view
+                    </button>
+                    {reportBookmarks.length > 0 && <div className="bookmark-menu-label">Power BI report bookmarks</div>}
                     {reportBookmarks.map((bookmark) => (
-                      <option key={`report_${bookmark.name}`} value={toReportBookmarkSelectionId(bookmark.name)}>
+                      <button
+                        type="button"
+                        key={`report_${bookmark.name}`}
+                        className="bookmark-menu-item"
+                        onClick={() => handleBookmarkSelectionChange(toReportBookmarkSelectionId(bookmark.name))}
+                        title={bookmark.displayName || bookmark.name}
+                      >
                         {bookmark.displayName || bookmark.name}
-                      </option>
+                      </button>
                     ))}
-                  </optgroup>
-                )}
-                {bookmarkProfiles.length > 0 && (
-                  <optgroup label="Captured and synced personal views (Power BI state)">
+                    {bookmarkProfiles.length > 0 && <div className="bookmark-menu-label">Captured and synced personal views</div>}
                     {bookmarkProfiles.map((bookmark) => (
-                      <option key={`saved_${bookmark.id}`} value={toSavedBookmarkSelectionId(bookmark.id)}>
+                      <button
+                        type="button"
+                        key={`saved_${bookmark.id}`}
+                        className="bookmark-menu-item"
+                        onClick={() => handleBookmarkSelectionChange(toSavedBookmarkSelectionId(bookmark.id))}
+                        title={bookmark.name}
+                      >
                         {bookmark.name}
-                      </option>
+                      </button>
                     ))}
-                  </optgroup>
+                    {reportBookmarks.length === 0 && bookmarkProfiles.length === 0 && (
+                      <div className="bookmark-menu-empty">No bookmarks yet. Use Save View.</div>
+                    )}
+                  </div>
                 )}
-                {reportBookmarks.length === 0 && bookmarkProfiles.length === 0 && (
-                  <option value="" disabled>
-                    No bookmarks yet. Use Save View.
-                  </option>
-                )}
-              </select>
+              </div>
               <button
                 onClick={handleDeleteSelectedBookmark}
                 className="btn-delete-bookmark"

@@ -716,8 +716,8 @@ function App() {
                         reportRef.current = report;
                       }}
                       onReportReady={(report, page) => {
-                        setLayoutReport((prev: any) => (prev === report ? prev : report));
-                        setLayoutPage((prev: any) => (prev?.name === page?.name ? prev : page));
+                        setLayoutReport((prev: any) => (prev !== report ? report : prev));
+                        setLayoutPage((prev: any) => (prev !== page ? page : prev));
                       }}
                       toggleButton={
                         <button className="primary-btn" onClick={() => setMode("creator")}>

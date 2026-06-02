@@ -45,7 +45,7 @@ export const reportsToEmbed: ReportToEmbed[] = [
     reportId: "f2496a3d-b253-4ab8-94d4-2f69816551cd",
     workspaceId: "a0f458be-e2a3-47c8-85f7-75d7b7f6034f",
     datasetId: "",
-    name: "Translytical flow Demo",
+    name: "Writeback Flow",
     isSecureEmbedded: true,
     embeddingIframe: `<iframe title="Translytical flow for writeback" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=f2496a3d-b253-4ab8-94d4-2f69816551cd&autoAuth=true&ctid=e4d98dd2-9199-42e5-ba8b-da3e763ede2e&language=selectLanguage" frameborder="0" allowFullScreen="true"></iframe>`,
   },

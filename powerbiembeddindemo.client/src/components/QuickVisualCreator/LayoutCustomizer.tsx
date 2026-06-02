@@ -22,6 +22,7 @@ export interface LayoutState {
   columns: number;
   spanType: number;
   isCustomLayoutActive: boolean;
+  pageName?: string;
 }
 
 interface LayoutCustomizerProps {
@@ -42,6 +43,9 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
   const [isCustomLayoutActive, setIsCustomLayoutActive] = useState(false);
   const [showVisuals, setShowVisuals] = useState(false);
   const [showLayouts, setShowLayouts] = useState(false);
+  const [pendingLayoutState, setPendingLayoutState] = useState<LayoutState | null>(null);
+  const [layoutRenderTrigger, setLayoutRenderTrigger] = useState(0); // Trigger for forced layout render
+  const [currentPageName, setCurrentPageName] = useState<string | undefined>(undefined); // Track current page for comparison
 
   const restoreDefaultLayout = useCallback(async () => {
     if (!report) return;
@@ -63,24 +67,12 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
         columns,
         spanType,
         isCustomLayoutActive,
+        pageName: page?.name,
       }),
       setLayoutState: (state: LayoutState) => {
         if (!state) return;
-        setColumns(state.columns ?? 2);
-        setSpanType(state.spanType ?? SPAN_TYPE.NONE);
-        setIsCustomLayoutActive(!!state.isCustomLayoutActive);
-        if (Array.isArray(state.selectedVisuals)) {
-          setVisuals((prev) =>
-            prev.map((v) => ({
-              ...v,
-              checked: state.selectedVisuals.includes(v.name),
-            })),
-          );
-        }
-        // If not custom, explicitly restore default
-        if (!state.isCustomLayoutActive) {
-          void restoreDefaultLayout();
-        }
+        // Set pending state which will trigger effect to apply layout
+        setPendingLayoutState(state);
       },
       resetToDefault: () => {
         setColumns(2);
@@ -90,25 +82,90 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
         void restoreDefaultLayout();
       },
     }),
-    [visuals, columns, spanType, isCustomLayoutActive, restoreDefaultLayout],
+    [visuals, columns, spanType, isCustomLayoutActive, page?.name, restoreDefaultLayout],
   );
+
+  const fetchPageVisuals = useCallback(async () => {
+    if (!page || typeof page.getVisuals !== "function") {
+      return [] as VisualItem[];
+    }
+
+    try {
+      const pageVisuals = await page.getVisuals();
+      const items: VisualItem[] = pageVisuals
+        .filter((v: any) => v.name && v.title !== undefined && v.title !== "")
+        .map((v: any) => ({ name: v.name, title: v.title, checked: true }));
+      setVisuals(items);
+      return items;
+    } catch (e) {
+      console.error("Error fetching visuals:", e);
+      setVisuals([]);
+      return [] as VisualItem[];
+    }
+  }, [page]);
 
   // Fetch visuals from the active page
   useEffect(() => {
     if (!page) return;
-    (async () => {
-      try {
-        const pageVisuals = await page.getVisuals();
-        const items: VisualItem[] = pageVisuals
-          .filter((v: any) => v.title !== undefined && v.title !== "")
-          .map((v: any) => ({ name: v.name, title: v.title, checked: true }));
-        setVisuals(items);
-        setIsCustomLayoutActive(false);
-      } catch (e) {
-        console.error("Error fetching visuals:", e);
-      }
-    })();
-  }, [page]);
+    setShowVisuals(false);
+    setShowLayouts(false);
+    
+    // Only reset layout if it's a DIFFERENT page (by page name)
+    // If the page name is the same but the reference changed (e.g., after theme application),
+    // preserve the current layout state
+    if (page.name !== currentPageName) {
+      setIsCustomLayoutActive(false);
+    }
+    
+    // Update current page name
+    setCurrentPageName(page.name);
+    
+    void fetchPageVisuals();
+  }, [fetchPageVisuals, page]);
+
+  useEffect(() => {
+    if (!pendingLayoutState) return;
+
+    const savedPageName = pendingLayoutState.pageName;
+    if (savedPageName && page?.name && savedPageName !== page.name) {
+      setPendingLayoutState(null);
+      return;
+    }
+
+    // Apply layout state from bookmark
+    const nextColumns = pendingLayoutState.columns ?? 2;
+    const nextSpanType = pendingLayoutState.spanType ?? SPAN_TYPE.NONE;
+    const nextIsCustomLayoutActive = !!pendingLayoutState.isCustomLayoutActive;
+
+    setColumns(nextColumns);
+    setSpanType(nextSpanType);
+    setIsCustomLayoutActive(nextIsCustomLayoutActive);
+
+    // Update visual selections if available
+    let visualsApplied = false;
+    if (Array.isArray(pendingLayoutState.selectedVisuals) && visuals.length > 0) {
+      const selectedNames = new Set(pendingLayoutState.selectedVisuals);
+      setVisuals((prev) =>
+        prev.map((v) => ({
+          ...v,
+          checked: selectedNames.has(v.name),
+        })),
+      );
+      visualsApplied = true;
+    }
+
+    // If not custom layout, restore default
+    if (!nextIsCustomLayoutActive) {
+      void restoreDefaultLayout();
+      setPendingLayoutState(null); // Clear after restoring
+      setLayoutRenderTrigger((prev) => prev + 1); // Trigger render
+    } else if (visualsApplied || !Array.isArray(pendingLayoutState.selectedVisuals)) {
+      // Only clear pending state if we applied visuals or there are no specific visuals to select
+      setPendingLayoutState(null);
+      setLayoutRenderTrigger((prev) => prev + 1); // Trigger render
+    }
+    // If visuals weren't applied yet, keep pending state and wait for visuals to load
+  }, [page?.name, pendingLayoutState, restoreDefaultLayout, visuals.length]);
 
   // Render visuals with current layout
   const renderVisuals = useCallback(async () => {
@@ -251,10 +308,18 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
     }
   }, [report, page, visuals, columns, spanType, isCustomLayoutActive]);
 
-  // Re-render when layout changes
+  // Handle case where visuals load after pending layout state is set
+  useEffect(() => {
+    if (pendingLayoutState && visuals.length > 0 && pendingLayoutState.isCustomLayoutActive) {
+      // Visuals have loaded while we have pending layout, trigger re-application
+      setLayoutRenderTrigger((prev) => prev + 1);
+    }
+  }, [visuals.length, pendingLayoutState?.isCustomLayoutActive]);
+
+  // Re-render when layout changes (directly watch layout state + explicit trigger)
   useEffect(() => {
     renderVisuals();
-  }, [renderVisuals]);
+  }, [columns, spanType, isCustomLayoutActive, visuals, page, report, layoutRenderTrigger, renderVisuals]);
 
   const toggleVisual = (name: string) => {
     setVisuals((prev) => prev.map((v) => (v.name === name ? { ...v, checked: !v.checked } : v)));
@@ -273,17 +338,7 @@ const LayoutCustomizer = forwardRef<LayoutCustomizerHandle, LayoutCustomizerProp
     setVisuals((prev) => prev.map((v) => ({ ...v, checked: true })));
     await restoreDefaultLayout();
     // Re-fetch visuals after reload to ensure state is fresh
-    if (page) {
-      try {
-        const pageVisuals = await page.getVisuals();
-        const items: VisualItem[] = pageVisuals
-          .filter((v: any) => v.title !== undefined && v.title !== "")
-          .map((v: any) => ({ name: v.name, title: v.title, checked: true }));
-        setVisuals(items);
-      } catch {
-        /* ignore */
-      }
-    }
+    await fetchPageVisuals();
   };
 
   const layoutLabel = () => {
