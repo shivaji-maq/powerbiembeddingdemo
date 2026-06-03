@@ -617,7 +617,7 @@ function App() {
                         </button>
 
                         {/* Bookmark selector + delete + load */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        {/* <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <select
                             className="sidebar-input"
                             style={{ margin: 0, minWidth: 180, maxWidth: 280, height: 34 }}
@@ -628,11 +628,11 @@ function App() {
                               Select bookmark
                             </option>
                             <option value="original:view">Original report view</option>
-                            {bookmarks.length > 0 && (
+                            {bookmarks?.length > 0 && (
                               <>
                                 {bookmarks
-                                  .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-                                  .map((b, idx) => (
+                                  ?.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                                  ?.map((b, idx) => (
                                     <option key={b.id} value={b.id}>
                                       {idx === 0 ? `Last captured view - ${b.name}` : b.name}
                                     </option>
@@ -685,14 +685,14 @@ function App() {
                               if (selectedBookmarkId === "original:view") {
                                 layoutCustomizerRef.current?.resetToDefault?.();
                               } else {
-                                const bm = bookmarks.find((b) => b.id === selectedBookmarkId);
+                                const bm = bookmarks?.find((b) => b.id === selectedBookmarkId);
                                 if (bm) quickVisualCreatorRef.current?.loadBookmark(bm);
                               }
                             }}
                           >
                             ↻
                           </button>
-                        </div>
+                        </div> */}
                       </div>
                       <button className="primary-btn" onClick={() => setMode("viewer")}>
                         Report Viewer
