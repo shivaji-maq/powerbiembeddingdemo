@@ -676,8 +676,8 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isReportLoaded, setIsReportLoaded] = useState(false);
-  const [selectedThemeName, setSelectedThemeName] = useState(
-    reportColorThemes[0].name
+  const [selectedThemeName, setSelectedThemeName] = useState<string>(
+    ""
   );
   const [themeMode, setThemeMode] = useState<ReportThemeMode>("light");
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
@@ -1080,7 +1080,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     setQuickVisualShowXAxis(true);
     setQuickVisualShowYAxis(true);
     setQuickVisualStatus(null);
-    setSelectedThemeName(reportColorThemes[0].name);
+    setSelectedThemeName("");
     setThemeMode("light");
     setThemeStatus("");
     setIsThemeMenuOpen(false);
@@ -1177,8 +1177,8 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
   const activeReportThemeJson = useMemo(
     () => {
-      // Don't apply any theme when viewing the original report
-      if (isOriginalReportSelection(selectedBookmarkId)) {
+      // Don't apply any theme when viewing the original report or when no theme is selected
+      if (isOriginalReportSelection(selectedBookmarkId) || !selectedThemeName) {
         return undefined;
       }
       return buildReportTheme(selectedThemeName, themeMode);
@@ -1188,7 +1188,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
   const clearReportTheme = useCallback(
     async (showStatus = true) => {
-      setSelectedThemeName(reportColorThemes[0].name);
+      setSelectedThemeName("");
       setThemeMode("light");
 
       if (!isReportLoaded || !reportRef.current?.applyTheme) {
@@ -1564,6 +1564,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
             // The embed config bookmark property is a best-effort optimisation
             // to reduce initial flash but is not reliable for slicer restoration.
             await applyBookmarkProfile(selectedSavedBookmark);
+            await applyGlobalReportFilters();
           }
         } else if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
           await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
@@ -3031,6 +3032,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
       // Apply PBI bookmark state first (filters, slicers, etc.)
       await applyBookmarkProfile(selectedBookmark);
+      await applyGlobalReportFilters();
       await syncVisibleStateToAuthoring();
 
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
