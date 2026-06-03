@@ -6,7 +6,7 @@ import logo from "./assets/logo.png";
 import { useAuth } from "./hooks/useAuth";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchWorkspaces } from "./redux/slices/powerBISlice/powerBISlice";
-import { removeBookmark } from "./redux/slices/bookmarkSlice/bookmarkSlice";
+// import { removeBookmark } from "./redux/slices/bookmarkSlice/bookmarkSlice";
 import { PersonalizedEditableReport } from "./components/PersonalizedEditableReport/PersonalizedEditableReport";
 import { QuickVisualCreator, LayoutCustomizer } from "./components/QuickVisualCreator";
 import type { LayoutCustomizerHandle } from "./components/QuickVisualCreator";
@@ -146,13 +146,13 @@ function App() {
   // const [rFilter, setRFilter] = useState("");
   const [authError, setAuthError] = useState<string>("");
   const [mode, setMode] = useState<"viewer" | "creator">("viewer");
-  const [selectedBookmarkId, setSelectedBookmarkId] = useState("");
+  // const [selectedBookmarkId, setSelectedBookmarkId] = useState("");
   const [layoutReport, setLayoutReport] = useState<any>(null);
   const [layoutPage, setLayoutPage] = useState<any>(null);
   const [globalDateRange, setGlobalDateRange] = useState<GlobalDateRange>(getInitialGlobalDateRange);
   const [appliedGlobalDateRange, setAppliedGlobalDateRange] = useState<GlobalDateRange>(getInitialGlobalDateRange);
   const [globalDateStatus, setGlobalDateStatus] = useState("");
-  const bookmarks = useSelector((state: RootState) => state.bookmarks.bookmarks);
+  // const bookmarks = useSelector((state: RootState) => state.bookmarks.bookmarks);
   const { isAuthenticated, user, account, error: authHookError } = useAuth();
   const {
     workspaces,
