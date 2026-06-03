@@ -582,7 +582,13 @@ const toNormalizedBookmarkProfile = (bookmark: any): BookmarkProfile | null => {
   const id = typeof bookmark.id === "string" && bookmark.id ? bookmark.id : createBookmarkId();
 
   const rawBookmarkName = typeof bookmark.name === "string" ? bookmark.name.trim() : "";
-  const bookmarkName = rawBookmarkName ? toReadableBookmarkName(rawBookmarkName) : `Saved view ${id.slice(0, 6)}`;
+  // Preserve the original name if it's already a readable, non-empty string
+  // Only process it if it looks like an opaque identifier or is empty
+  const bookmarkName = rawBookmarkName && !isLikelyOpaqueBookmarkIdentifier(rawBookmarkName)
+    ? rawBookmarkName
+    : rawBookmarkName
+      ? toReadableBookmarkName(rawBookmarkName)
+      : `Saved view ${id.slice(0, 6)}`;
 
   const bookmarkState = typeof bookmark.state === "string" ? bookmark.state : typeof bookmark.bookmarkStateJson === "string" ? bookmark.bookmarkStateJson : "";
 
@@ -1150,8 +1156,43 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   );
 
   const activeReportThemeJson = useMemo(
-    () => buildReportTheme(selectedThemeName, themeMode),
-    [selectedThemeName, themeMode]
+    () => {
+      // Don't apply any theme when viewing the original report
+      if (isOriginalReportSelection(selectedBookmarkId)) {
+        return undefined;
+      }
+      return buildReportTheme(selectedThemeName, themeMode);
+    },
+    [selectedThemeName, themeMode, selectedBookmarkId]
+  );
+
+  const clearReportTheme = useCallback(
+    async (showStatus = true) => {
+      setSelectedThemeName(reportColorThemes[0].name);
+      setThemeMode("light");
+
+      if (!isReportLoaded || !reportRef.current?.applyTheme) {
+        return;
+      }
+
+      try {
+        // Clear theme by applying undefined theme JSON
+        await reportRef.current.applyTheme({ themeJson: undefined });
+        if (authoringReportRef.current?.applyTheme) {
+          await authoringReportRef.current.applyTheme({
+            themeJson: undefined,
+          });
+        }
+        if (showStatus) {
+          setThemeStatus("Theme cleared - showing original report colors");
+          window.setTimeout(() => setThemeStatus(""), 1600);
+        }
+      } catch (error) {
+        console.error("Unable to clear report theme", error);
+        setThemeStatus("Theme clear failed");
+      }
+    },
+    [isReportLoaded, reportRef]
   );
 
   const applyReportTheme = useCallback(
@@ -1304,7 +1345,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         }, 750);
       }
     },
-    [applyGlobalReportFilters, applyReportTheme, reportRef]
+    [applyGlobalReportFilters, applyReportTheme, clearReportTheme, reportRef]
   );
 
   const runWhenReportReady = useCallback(async <T,>(action: () => Promise<T>, retries = 5): Promise<T> => {
@@ -1529,26 +1570,17 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           : preferredBookmarkIdRaw;
       const preferredSavedBookmarkId = getSavedBookmarkIdFromSelection(preferredBookmarkId);
       const preferredReportBookmarkName = getReportBookmarkNameFromSelection(preferredBookmarkId);
-      const prefersOriginalSelection = isOriginalReportSelection(preferredBookmarkId);
 
       const preferredSavedBookmark = preferredSavedBookmarkId ? localBookmarks.find((bookmark) => bookmark.id === preferredSavedBookmarkId) : null;
       const preferredReportBookmark = preferredReportBookmarkName
         ? reportDefinedBookmarks.find((bookmark) => bookmark.name === preferredReportBookmarkName)
         : null;
 
-      const fallbackSelectionId = localBookmarks[0]?.id
-        ? toSavedBookmarkSelectionId(localBookmarks[0].id)
-        : reportDefinedBookmarks[0]?.name
-          ? toReportBookmarkSelectionId(reportDefinedBookmarks[0].name)
-          : "";
-
       const nextSelectionId = preferredSavedBookmark
         ? toSavedBookmarkSelectionId(preferredSavedBookmark.id)
         : preferredReportBookmark
           ? toReportBookmarkSelectionId(preferredReportBookmark.name)
-          : prefersOriginalSelection
-            ? ORIGINAL_REPORT_SELECTION_ID
-            : fallbackSelectionId;
+          : ORIGINAL_REPORT_SELECTION_ID;
 
       if (nextSelectionId) {
         setSelectedBookmarkId(nextSelectionId);
@@ -3024,7 +3056,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         return;
       }
 
-      await applyReportTheme(reportColorThemes[0].name, "light", false);
+      await clearReportTheme(false);
 
       // Reset layout customizer to default (all visuals selected, default layout)
       if (layoutCustomizerRef?.current?.resetToDefault) {
@@ -3063,6 +3095,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus(`Loaded bookmark "${selectedBookmark.name}"`);
+      triggerAutoSaveRevision();
       return;
     }
 
@@ -3527,10 +3560,12 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const selectedBookmarkLabel = isOriginalReportSelection(selectedBookmarkId)
     ? "Original report view"
     : selectedSavedBookmarkId
-      ? bookmarkProfiles.find((bookmark) => bookmark.id === selectedSavedBookmarkId)?.name || "Select bookmark"
+      ? bookmarkProfiles.find((bookmark) => bookmark.id === selectedSavedBookmarkId)?.name || "Saved view"
       : selectedReportBookmarkName
         ? reportBookmarks.find((bookmark) => bookmark.name === selectedReportBookmarkName)?.displayName || selectedReportBookmarkName
-        : "Select bookmark";
+        : !selectedBookmarkId
+          ? "Original report view"
+          : "Select bookmark";
   console.log(reportSettings);
   return (
     <div className="personalized-editable-report">
