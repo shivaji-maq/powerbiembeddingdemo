@@ -3095,7 +3095,6 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus(`Loaded bookmark "${selectedBookmark.name}"`);
-      triggerAutoSaveRevision();
       return;
     }
 

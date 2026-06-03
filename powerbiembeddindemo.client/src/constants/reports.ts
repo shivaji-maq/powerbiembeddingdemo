@@ -20,7 +20,7 @@ export const reportsToEmbed: ReportToEmbed[] = [
     isSecureEmbedded: false,
     globalDateFilter: {
       table: "vw_DimOrder",
-      column: "Order_Date",
+      column: "Order Date",
     },
   },
   {
