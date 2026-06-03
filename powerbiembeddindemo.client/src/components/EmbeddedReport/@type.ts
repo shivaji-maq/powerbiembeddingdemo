@@ -10,6 +10,7 @@ export interface EmbedReportProps {
   reportSettings?: models.ISettings;
   reportFilters?: models.ReportLevelFilters[];
   themeJson?: Record<string, unknown>;
+  bookmarkState?: string;
   reportCssClassName?: string;
   accessToken: string;
   tokenType?: string;

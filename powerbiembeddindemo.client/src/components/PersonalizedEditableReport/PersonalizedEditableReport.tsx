@@ -42,13 +42,6 @@ interface BookmarkProfile {
   bookmarkStateJson?: string;
   createdAt: string;
   updatedAt: string;
-  layoutState?: any;
-  theme?: BookmarkThemeState;
-}
-
-interface BookmarkThemeState {
-  name: string;
-  mode: ReportThemeMode;
 }
 
 const SAVED_BOOKMARK_PREFIX = "saved:";
@@ -442,29 +435,6 @@ const parseSafeDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const normalizeBookmarkTheme = (value: any): BookmarkThemeState | undefined => {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  const requestedThemeName =
-    typeof value.name === "string" ? value.name : value.themeName;
-  const themeName = reportColorThemes.some(
-    (theme) => theme.name === requestedThemeName
-  )
-    ? requestedThemeName
-    : reportColorThemes[0].name;
-
-  const requestedMode =
-    typeof value.mode === "string" ? value.mode : value.themeMode;
-  const mode: ReportThemeMode = requestedMode === "dark" ? "dark" : "light";
-
-  return {
-    name: themeName,
-    mode,
-  };
-};
-
 const flattenReportBookmarks = (
   bookmarks: models.IReportBookmark[]
 ): models.IReportBookmark[] => {
@@ -602,7 +572,6 @@ const toNormalizedBookmarkProfile = (bookmark: any): BookmarkProfile | null => {
     name: bookmarkName,
     state: bookmarkState,
     bookmarkStateJson: bookmarkState,
-    theme: normalizeBookmarkTheme(bookmark.theme),
     createdAt:
       typeof bookmark.createdAt === "string"
         ? bookmark.createdAt
@@ -756,6 +725,40 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   const quickVisualFieldCatalogStorageKey = `pbi_quick_visual_fields_${reportId}`;
   const quickVisualSessionStorageKey = `pbi_quick_visual_session_${userId}_${reportId}`;
   const originalReportStateStorageKey = `pbi_original_state_${userId}_${reportId}`;
+
+  // Synchronously read the stored bookmark state for initial embed config.
+  // Per the Microsoft showcase pattern, applying bookmark state at embed time
+  // prevents the report from flashing the original/default view first.
+  const initialBookmarkState = useMemo(() => {
+    try {
+      const selectedRaw = window.localStorage.getItem(`pbi_bookmarks_${userId}_${reportId}_selected`) || "";
+      if (!selectedRaw || selectedRaw === ORIGINAL_REPORT_SELECTION_ID) {
+        return undefined;
+      }
+
+      const savedId = selectedRaw.startsWith(SAVED_BOOKMARK_PREFIX)
+        ? selectedRaw.slice(SAVED_BOOKMARK_PREFIX.length)
+        : !selectedRaw.startsWith(REPORT_BOOKMARK_PREFIX)
+          ? selectedRaw
+          : null;
+
+      if (!savedId) {
+        return undefined;
+      }
+
+      const rawBookmarks = window.localStorage.getItem(`pbi_bookmarks_${userId}_${reportId}`);
+      if (!rawBookmarks) {
+        return undefined;
+      }
+
+      const bookmarks: BookmarkProfile[] = JSON.parse(rawBookmarks);
+      const bookmark = bookmarks.find((b) => b.id === savedId);
+      const state = bookmark?.state || bookmark?.bookmarkStateJson;
+      return state || undefined;
+    } catch {
+      return undefined;
+    }
+  }, [userId, reportId]);
 
   const { savePersonalization, getPersonalization, loading } = usePersonalization();
   const isReportLoadedRef = useRef(isReportLoaded);
@@ -916,6 +919,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     try {
       const captured = await reportRef.current.bookmarksManager.capture({
         personalizeVisuals: true,
+        allPages: true,
       });
       const bookmarkState = captured?.state || "";
       if (!bookmarkState) {
@@ -965,6 +969,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         try {
           const captured = await reportRef.current.bookmarksManager.capture({
             personalizeVisuals: true,
+            allPages: true,
           });
           const bookmarkState = captured?.state || "";
           if (bookmarkState) {
@@ -994,6 +999,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     try {
       const captured = await reportRef.current.bookmarksManager.capture({
         personalizeVisuals: true,
+        allPages: true,
       });
       const bookmarkState = captured?.state || "";
 
@@ -1021,6 +1027,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     try {
       const captured = await authoringReportRef.current.bookmarksManager.capture({
         personalizeVisuals: true,
+        allPages: true,
       });
       const bookmarkState = captured?.state || "";
 
@@ -1134,23 +1141,36 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   }, [isBookmarkMenuOpen]);
 
   useEffect(() => {
-    if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization) {
-      return;
-    }
-
+  if (!isReportLoaded || !isAuthoringReportLoaded || isHydratingPersonalization) {
+    return;
+  }
+  // Delay to ensure any in-flight applyState (from hydration) settles
+  // before we sync authoring state on top of it.
+  const timer = window.setTimeout(() => {
     void syncVisibleStateToAuthoring();
-  }, [isAuthoringReportLoaded, isHydratingPersonalization, isReportLoaded, syncVisibleStateToAuthoring]);
+  }, 800);
+  return () => window.clearTimeout(timer);
+}, [isAuthoringReportLoaded, isHydratingPersonalization, isReportLoaded, syncVisibleStateToAuthoring]);
 
   const persistBookmarks = useCallback(
     (nextBookmarks: BookmarkProfile[]) => {
-      const finalBookmarksToSave = normalizeAndDedupeBookmarkProfiles(nextBookmarks);
+      try {
+        const finalBookmarksToSave = normalizeAndDedupeBookmarkProfiles(nextBookmarks);
 
-      setBookmarkProfiles(finalBookmarksToSave);
-      bookmarkProfilesRef.current = finalBookmarksToSave;
-      window.localStorage.setItem(
-        bookmarksStorageKey,
-        JSON.stringify(finalBookmarksToSave)
-      );
+        // Update React state
+        setBookmarkProfiles(finalBookmarksToSave);
+        bookmarkProfilesRef.current = finalBookmarksToSave;
+
+        // Persist to localStorage
+        const serialized = JSON.stringify(finalBookmarksToSave);
+        window.localStorage.setItem(bookmarksStorageKey, serialized);
+
+        console.log(`[Bookmarks] Saved ${finalBookmarksToSave.length} bookmarks to localStorage`);
+      } catch (error) {
+        console.error("[Bookmarks] Error persisting bookmarks:", error);
+        // Don't lose existing bookmarks if there's an error
+        setBookmarkProfiles(bookmarkProfilesRef.current);
+      }
     },
     [bookmarksStorageKey]
   );
@@ -1233,15 +1253,15 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       bookmarkName: string,
       bookmarkStateJson: string,
       selectAfterUpsert = false,
-      mode: CapturedBookmarkUpsertMode = "syncApplied",
-      layoutState?: any,
-      theme?: BookmarkThemeState
+      mode: CapturedBookmarkUpsertMode = "syncApplied"
     ) => {
       if (!bookmarkStateJson) {
+        console.warn("[Bookmarks] Cannot upsert: no bookmark state");
         return null;
       }
 
       const existingBookmarks = bookmarkProfilesRef.current;
+      console.log(`[Bookmarks] Upserting "${bookmarkName}" with ${existingBookmarks.length} existing bookmarks`);
 
       const normalizedInputName = typeof bookmarkName === "string" ? bookmarkName.trim() : "";
       const canMatchByName = !!normalizedInputName && !isLikelyOpaqueBookmarkIdentifier(normalizedInputName);
@@ -1269,11 +1289,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         bookmarkStateJson,
         createdAt: existingBookmark?.createdAt || now,
         updatedAt: now,
-        layoutState: layoutState ?? existingBookmark?.layoutState,
-        theme: theme ?? existingBookmark?.theme,
       };
 
       const nextBookmarks = [nextBookmark, ...existingBookmarks.filter((bookmark) => bookmark.id !== nextBookmark.id)];
+      console.log(`[Bookmarks] Created bookmark "${normalizedName}" (id: ${nextBookmark.id}), total: ${nextBookmarks.length}`);
 
       persistBookmarks(nextBookmarks);
 
@@ -1298,24 +1317,23 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       bookmarkApplyInProgressRef.current = true;
 
       try {
-        let appliedBookmarkState = false;
         const bookmarkState = bookmark.state || bookmark.bookmarkStateJson;
 
+        // Apply bookmark state — this is the ONLY Power BI API call.
+        // It is the authoritative source of truth for filters, slicers,
+        // selections, and visual state per the Microsoft showcase pattern.
         if (bookmarkState && reportRef.current?.bookmarksManager?.applyState) {
           await reportRef.current.bookmarksManager.applyState(bookmarkState);
-          appliedBookmarkState = true;
-        }
-
-        if (!appliedBookmarkState && bookmark.filtersJson) {
+        } else if (bookmark.filtersJson) {
           const filters = JSON.parse(bookmark.filtersJson);
           await applyPersonalizedFilters(reportRef.current, filters);
-        }
 
-        if (!appliedBookmarkState && bookmark.activePage && reportRef.current.getPages) {
-          const pages = await reportRef.current.getPages();
-          const page = pages.find((p: any) => p?.name === bookmark.activePage);
-          if (page && typeof page.setActive === "function") {
-            await page.setActive();
+          if (bookmark.activePage && reportRef.current.getPages) {
+            const pages = await reportRef.current.getPages();
+            const page = pages.find((p: any) => p?.name === bookmark.activePage);
+            if (page && typeof page.setActive === "function") {
+              await page.setActive();
+            }
           }
         }
 
@@ -1330,13 +1348,6 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         if (safeLastSaved) {
           setLastSaved(safeLastSaved);
         }
-
-        const bookmarkTheme = normalizeBookmarkTheme(bookmark.theme);
-        if (bookmarkTheme) {
-          await applyReportTheme(bookmarkTheme.name, bookmarkTheme.mode, false);
-        }
-
-        await applyGlobalReportFilters();
       } catch (error) {
         console.error("Error applying bookmark profile:", error);
       } finally {
@@ -1345,7 +1356,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         }, 750);
       }
     },
-    [applyGlobalReportFilters, applyReportTheme, clearReportTheme, reportRef]
+    [reportRef]
   );
 
   const runWhenReportReady = useCallback(async <T,>(action: () => Promise<T>, retries = 5): Promise<T> => {
@@ -1405,9 +1416,13 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(bookmarksStorageKey);
+      console.log(`[Bookmarks] Loading from key "${bookmarksStorageKey}", found:`, !!stored);
+      
       const parsedBookmarks = stored ? (JSON.parse(stored) as BookmarkProfile[]) : [];
+      console.log(`[Bookmarks] Parsed ${parsedBookmarks.length} bookmarks from localStorage`);
 
       const normalizedBookmarks = normalizeAndDedupeBookmarkProfiles(parsedBookmarks);
+      console.log(`[Bookmarks] After normalization: ${normalizedBookmarks.length} bookmarks (was ${parsedBookmarks.length})`);
 
       if (stored) {
         window.localStorage.setItem(bookmarksStorageKey, JSON.stringify(normalizedBookmarks));
@@ -1484,61 +1499,14 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         if (saved && reportRef.current) {
           suppressAutoSaveEventsRef.current = 2;
 
-          let appliedSavedState = false;
-
-          if (saved.settingsJson && reportRef.current?.bookmarksManager?.applyState) {
-            try {
-              const parsedSettings = JSON.parse(saved.settingsJson);
-              const bookmarkStateFromSettings =
-                typeof parsedSettings === "string"
-                  ? parsedSettings
-                  : parsedSettings?.bookmarkState;
-              const savedTheme = normalizeBookmarkTheme(parsedSettings?.theme);
-
-              if (bookmarkStateFromSettings) {
-                await runWhenReportReady(async () => {
-                  await reportRef.current.bookmarksManager.applyState(bookmarkStateFromSettings);
-                  return true;
-                });
-                appliedSavedState = true;
-              }
-
-              if (savedTheme) {
-                await applyReportTheme(savedTheme.name, savedTheme.mode, false);
-              }
-            } catch (stateError) {
-              console.warn("Failed applying saved bookmark state", stateError);
-            }
-          }
-
-          if (!appliedSavedState && saved.filtersJson) {
-            const filters = JSON.parse(saved.filtersJson);
-            await runWhenReportReady(async () => {
-              await applyPersonalizedFilters(reportRef.current, filters);
-              return true;
-            });
-          }
-
-          if (!appliedSavedState && saved.activePage && reportRef.current.getPages) {
-            const pages = await runWhenReportReady(async () => {
-              return await reportRef.current.getPages();
-            });
-            const page = pages.find((p: any) => p.name === saved.activePage);
-            if (page && typeof page.setActive === "function") {
-              await runWhenReportReady(async () => {
-                await page.setActive();
-                return true;
-              });
-              setCurrentPage(saved.activePage);
-            }
-          }
+          // Restore theme into React state for UI controls.
+          // Do NOT call report.applyTheme() here — it races with applyState().
+          // The applyBookmarkProfile call later will handle the bookmark state.
 
           const safeLastSaved = parseSafeDate(saved.updatedAt);
           if (safeLastSaved) {
             setLastSaved(safeLastSaved);
           }
-
-          await applyGlobalReportFilters();
         }
       } catch (error) {
         console.error("Error loading personalization:", error);
@@ -1592,11 +1560,10 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         if (selectedSavedBookmarkId) {
           const selectedSavedBookmark = localBookmarks.find((bookmark) => bookmark.id === selectedSavedBookmarkId);
           if (selectedSavedBookmark) {
+            // Always apply via applyState() to guarantee slicer/filter state.
+            // The embed config bookmark property is a best-effort optimisation
+            // to reduce initial flash but is not reliable for slicer restoration.
             await applyBookmarkProfile(selectedSavedBookmark);
-            // Restore layout customizer state from bookmark
-            if (selectedSavedBookmark.layoutState && layoutCustomizerRef?.current?.setLayoutState) {
-              layoutCustomizerRef.current.setLayoutState(selectedSavedBookmark.layoutState);
-            }
           }
         } else if (selectedReportBookmarkName && typeof reportRef.current?.bookmarksManager?.apply === "function") {
           await reportRef.current.bookmarksManager.apply(selectedReportBookmarkName);
@@ -1634,26 +1601,11 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
     bookmarksStorageKey,
     applyBookmarkProfile,
     applyGlobalReportFilters,
-    applyReportTheme,
-    runWhenReportReady,
     selectedBookmarkStorageKey,
     showBookmarkStatus,
     loadReportBookmarks,
     restoreOriginalReportState,
   ]);
-
-  // Auto-load selected bookmark on page refresh/initial load
-  const hasAutoLoadedBookmarkRef = useRef(false);
-  useEffect(() => {
-    if (!isReportLoaded || isHydratingPersonalization || hasAutoLoadedBookmarkRef.current) {
-      return;
-    }
-
-    if (selectedBookmarkId && selectedBookmarkId !== "original:view") {
-      hasAutoLoadedBookmarkRef.current = true;
-      void loadBookmarkById(selectedBookmarkId);
-    }
-  }, [isReportLoaded, isHydratingPersonalization, selectedBookmarkId]);
 
   const getCurrentPersonalizationPayload = useCallback(async () => {
     if (!reportRef.current) {
@@ -1667,6 +1619,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       try {
         const captured = await reportRef.current.bookmarksManager.capture({
           personalizeVisuals: true,
+          allPages: true,
         });
         bookmarkState = captured?.state || "";
       } catch (error) {
@@ -2994,6 +2947,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       if (reportRef.current?.bookmarksManager?.capture) {
         const captured = await reportRef.current.bookmarksManager.capture({
           personalizeVisuals: true,
+          allPages: true,
         });
         bookmarkStateJson = captured?.state || "";
       }
@@ -3002,19 +2956,13 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         throw new Error("Unable to capture the current report view.");
       }
 
-      // Capture current layout customizer state
-      const layoutState = layoutCustomizerRef?.current?.getLayoutState?.() ?? undefined;
+      console.log(`[Bookmarks] Saving "${bookmarkName}" with state length: ${bookmarkStateJson.length}`);
 
       const nextBookmark = upsertCapturedBookmark(
         bookmarkName,
         bookmarkStateJson,
         false,
-        "saveView",
-        layoutState,
-        {
-          name: selectedThemeName,
-          mode: themeMode,
-        }
+        "saveView"
       );
       if (!nextBookmark) {
         throw new Error("Unable to save captured bookmark state.");
@@ -3084,14 +3032,6 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       // Apply PBI bookmark state first (filters, slicers, etc.)
       await applyBookmarkProfile(selectedBookmark);
       await syncVisibleStateToAuthoring();
-
-      // Then restore layout customizer state (applies custom layout on top)
-      if (selectedBookmark.layoutState && layoutCustomizerRef?.current?.setLayoutState) {
-        layoutCustomizerRef.current.setLayoutState(selectedBookmark.layoutState);
-      } else if (layoutCustomizerRef?.current?.resetToDefault) {
-        // No layout state saved — reset to default
-        layoutCustomizerRef.current.resetToDefault();
-      }
 
       window.localStorage.setItem(selectedBookmarkStorageKey, bookmarkIdToLoad);
       showBookmarkStatus(`Loaded bookmark "${selectedBookmark.name}"`);
@@ -3287,6 +3227,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
 
               const captured = await reportRef.current.bookmarksManager.capture({
                 personalizeVisuals: true,
+                allPages: true,
               });
               const bookmarkStateJson = captured?.state || "";
               if (!bookmarkStateJson) {
@@ -3311,12 +3252,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
                 resolvedBookmarkName,
                 bookmarkStateJson,
                 true,
-                "syncApplied",
-                undefined,
-                {
-                  name: selectedThemeName,
-                  mode: themeMode,
-                }
+                "syncApplied"
               );
               if (syncedBookmark) {
                 showBookmarkStatus(`Synced bookmark "${syncedBookmark.name}"`);
@@ -3366,7 +3302,11 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
               if (activePage?.name) {
                 setCurrentPage(activePage.name);
               }
-              await captureOriginalReportStateIfMissing();
+              // Only capture original state if no bookmark was applied at embed
+              // time, otherwise we'd capture the bookmarked state as "original".
+              if (!initialBookmarkState) {
+                await captureOriginalReportStateIfMissing();
+              }
               if (onReportReady && reportRef.current && activePage) {
                 onReportReady(reportRef.current, activePage);
               }
@@ -3390,6 +3330,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
       openQuickVisualModal,
       isReportLoaded,
       captureOriginalReportStateIfMissing,
+      initialBookmarkState,
       selectedThemeName,
       themeMode,
     ]
@@ -3485,21 +3426,21 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
         return;
       }
 
+      // Skip if a bookmark is currently being applied — the bookmark state
+      // already contains the correct filters and should not be overridden.
+      if (bookmarkApplyInProgressRef.current) {
+        return;
+      }
+
       try {
         await applyGlobalReportFilters();
-        const appliedFilters = await reportRef.current.getFilters?.();
-        console.log("Applied global report filters", {
-          requestedFilters: reportFilters,
-          appliedFilters,
-        });
       } catch (error) {
         console.warn("Unable to apply global report filters", error);
       }
     };
 
-    [0, 500, 1500].forEach((delayMs) => {
-      void applyReportFilters(delayMs);
-    });
+    // Apply once after a short delay to let bookmark embed settle
+    void applyReportFilters(300);
 
     return () => {
       isCancelled = true;
@@ -3766,6 +3707,7 @@ export const PersonalizedEditableReport: React.FC<PersonalizedEditableReportProp
           reportSettings={reportSettings}
           reportFilters={reportFilters}
           themeJson={activeReportThemeJson}
+          bookmarkState={initialBookmarkState}
           accessToken={accessToken}
           tokenType={tokenType}
           onReportLoadReportAttachmentFunction={handleReportLoadAttachment}
